@@ -3,7 +3,9 @@ import importlib.util
 import os
 import sys
 
-from bz.core import Trainer, TrainingProgressPlugin
+from bz import Trainer
+from bz.plugins import default_plugins
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -32,7 +34,7 @@ def main():
     # Load train module to training specification and train
     training_spec = TrainingSpecification.from_training_module(module)
     trainer = Trainer()
-    trainer.add_plugin(TrainingProgressPlugin.init(training_spec))
+    trainer.plugins = default_plugins(training_spec)
     trainer.train(training_spec.model, training_spec.optimizer, training_spec.loss_fn, training_spec.training_loader, validation_loader=training_spec.validation_loader)
 
 

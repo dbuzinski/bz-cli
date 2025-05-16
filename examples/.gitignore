@@ -1,1 +1,4 @@
+# directory for downloaded data
 data
+# directory for tensorboard data
+runs
