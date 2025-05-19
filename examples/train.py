@@ -4,7 +4,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from model import GarmentClassifier
-
+from bz.metrics import Accuracy, Precision
 
 # Set seed
 random.seed(42)
@@ -26,6 +26,8 @@ validation_set = torchvision.datasets.FashionMNIST('./data',
 training_loader = DataLoader(training_set, batch_size=batch_size, shuffle=True)
 validation_loader = DataLoader(validation_set, batch_size=batch_size, shuffle=False)
 
+# Metrics
+metrics = [Accuracy(), Precision()]
 
 # Define model
 model = GarmentClassifier()

@@ -14,7 +14,7 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["./"]
-include = ["bz", "bz.plugins"]
+include = ["bz", "bz.plugins", "bz.metrics"]
 
 [project.scripts]
 bz = "bz.cli:main"

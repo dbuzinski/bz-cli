@@ -1,86 +1,113 @@
+import time
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
 
 class Plugin:
-    def start_epoch(self, epoch):
+    def start_training_session(self, context):
         pass
 
-    def start_training_loop(self):
+    def start_epoch(self, context):
         pass
 
-    def start_training_batch(self):
+    def start_training_loop(self, context):
         pass
 
-    def end_training_batch(self):
+    def start_training_batch(self, context):
         pass
 
-    def end_training_loop(self):
+    def end_training_batch(self, context):
         pass
 
-    def start_validation_loop(self):
+    def end_training_loop(self, context):
         pass
 
-    def start_validation_batch(self):
+    def start_validation_loop(self, context):
         pass
 
-    def end_validation_batch(self):
+    def start_validation_batch(self, context):
         pass
 
-    def end_validation_loop(self):
+    def end_validation_batch(self, context):
         pass
 
-    def end_epoch(self, epoch):
+    def end_validation_loop(self, context):
         pass
 
-    def run_stage(self, stage, *args, **kwargs):
-        getattr(self, stage)(*args, **kwargs)
+    def checkpoint(self, context):
+        pass
+
+    def end_epoch(self, context):
+        pass
+
+    def end_training_session(self, context):
+        pass
+
+    def run_stage(self, stage, context):
+        getattr(self, stage)(context)
 
 
 class ConsoleOutPlugin(Plugin):
-    def __init__(self, training_data_len, training_batch_size, validation_data_len=0, validation_batch_size=0, update_interval=1):
+    def __init__(self, training_data_len, validation_data_len=0, update_interval=1):
         super().__init__()
         self.training_data_len = training_data_len
         self.validation_data_len = validation_data_len
-        self.training_batch_size = training_batch_size
-        self.validation_data_len = validation_data_len
-        self.validation_batch_size = validation_batch_size
         self.update_interval = update_interval
         self._training_bar = None
         self._validation_bar = None
-        self._total_loss = 0
-        self._batch_count = 0
+        self.training_start_time = None
 
-    def start_epoch(self, epoch):
-        print(f"Epoch {epoch}")
+    def start_training_session(self, context):
+        self.training_start_time = time.time()
 
-    def start_training_loop(self):
-        self._training_bar = tqdm(range(self.training_data_len), desc="Training")
-        self._desc_bar = tqdm(total=0, position=1, bar_format="{desc}")
+    def start_epoch(self, context):
+        print(f"\nEpoch {context.epoch + 1}:")
 
-    def end_training_batch(self):
+    def start_training_loop(self, context):
+        self._training_bar = tqdm(range(self.training_data_len), desc="Training", bar_format="{desc}:   {percentage:3.0f}%|{bar:40}{r_bar}", unit="batch")
+
+    def end_training_batch(self, context):
         self._training_bar.update(1)
         if (self._training_bar.n + 1) % self.update_interval == 0:
-            self._training_bar.set_postfix_str(f"loss: {self._total_loss / self._batch_count:.4f}")
+            postfix_dict = context.training_metrics.copy()
+            postfix_dict["loss"] = context.training_loss_total/ context.training_batch_count
+            self._training_bar.set_postfix(postfix_dict)
 
-    def end_training_loop(self):
+    def end_training_loop(self, context):
         if self._training_bar is not None:
             self._training_bar.close()
 
-    def start_validation_loop(self):
+    def start_validation_loop(self, context):
         if self.validation_data_len:
-            self._validation_bar = tqdm(range(self.validation_data_len), desc="Validation")
+            self._validation_bar = tqdm(range(self.validation_data_len), desc="Validation", bar_format="{desc}: {percentage:3.0f}%|{bar:40}{r_bar}", unit="batch")
 
-    def end_validation_batch(self):
+    def end_validation_batch(self, context):
         self._validation_bar.update(1)
+        if (self._validation_bar.n + 1) % self.update_interval == 0:
+            postfix_dict = context.validation_metrics.copy()
+            postfix_dict["loss"] = context.validation_loss_total/ context.validation_batch_count
+            self._validation_bar.set_postfix(postfix_dict)
 
-    def end_validation_loop(self):
+
+    def end_validation_loop(self, context):
         if self._validation_bar is not None:
             self._validation_bar.close()
 
-    def update_loss(self, loss):
-        self._total_loss += loss
-        self._batch_count += self.training_batch_size
+    def end_training_session(self, context):
+        total_time = time.time() - self.training_start_time
+        print("\n" + "=" * 26)
+        print("   Training Complete")
+        print("=" * 26)
+        print(f"\nTotal Epochs\t\t: {context.epoch}")
+        print(f"Total Time\t\t: {int(total_time // 60)}m {int(total_time % 60)}s")
+
+        print(f"Training Loss\t\t: {context.training_loss_total/context.training_batch_count:.4f}")
+        for name, val in context.training_metrics.items():
+            print(f"Training {name}\t: {val:.4f}")
+        print(f"Validation Loss\t\t: {context.validation_loss_total/context.validation_batch_count:.4f}")
+        for name, val in context.validation_metrics.items():
+            print(f"Validation {name}\t: {val:.4f}")
+        print("\n" + "=" * 26)
 
     @staticmethod
     def init(spec):
@@ -89,7 +116,7 @@ class ConsoleOutPlugin(Plugin):
         if spec.validation_loader:
             validation_data_len = len(spec.validation_loader)
             validation_batch_size = spec.validation_loader.batch_size
-        return ConsoleOutPlugin(len(spec.training_loader), spec.training_loader.batch_size, validation_data_len=validation_data_len, validation_batch_size=validation_batch_size)
+        return ConsoleOutPlugin(len(spec.training_loader), validation_data_len=validation_data_len)
 
 
 class TensorBoardPlugin(Plugin):
