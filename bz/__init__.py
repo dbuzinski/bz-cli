@@ -1,3 +1,6 @@
+import hashlib
+import inspect
+import json
 import os
 import torch
 from dataclasses import dataclass, field
@@ -17,15 +20,28 @@ class Trainer:
     def train(self, model, optimizer, loss_fn, training_loader, validation_loader=None, device=default_device, epochs=1, compile=True, checkpoint_interval=0, metrics=[]):
         context = TrainingContext()
         self.__run_stage("start_training_session", context)
+
+        # Compute training signature and checkpoint directory
+        training_signature = compute_training_signature(model, optimizer, loss_fn, context.hyperparams)
+        checkpoint_dir = os.path.join(".bz", "checkpoints", training_signature)
+        os.makedirs(checkpoint_dir, exist_ok=True)
+
+        # Try to resume from latest checkpoint
+        latest_checkpoint_epoch = find_latest_checkpoint_epoch(checkpoint_dir)
+        if latest_checkpoint_epoch:
+            checkpoint_path = os.path.join(checkpoint_dir, f"model_epoch{latest_checkpoint_epoch}.pth")
+            model.load_state_dict(torch.load(checkpoint_path))
+            context.epoch = latest_checkpoint_epoch
+            print(f"✓ Loaded checkpoint from {checkpoint_path}")
+
         # compile model
         if compile:
             model.compile()
-        checkpoint_dir = ".bz/checkpoints"
         os.makedirs(checkpoint_dir, exist_ok=True)
         # set model to training mode
         model.train()
         model.to(device)
-        for epoch in range(epochs):
+        for epoch in range(context.epoch, epochs):
             self.__run_stage("start_epoch", context)
             self.__run_stage("start_training_loop", context)
             # reset metrics for training loop
@@ -80,8 +96,8 @@ class Trainer:
             if checkpoint_interval and (epoch + 1) % checkpoint_interval == 0:
                 checkpoint_path = os.path.join(checkpoint_dir, f"model_epoch{epoch+1}.pth")
                 torch.save(model.state_dict(), checkpoint_path)
-                print(f"checkpoint saved to {checkpoint_path}")
-                self.__run_stage("checkpoint", context)
+                print(f"✓ Checkpoint saved to {checkpoint_path}")
+
             self.__run_stage("end_epoch", context)
             # Update context fields
             context.epoch += 1
@@ -103,3 +119,30 @@ class TrainingContext:
     validation_metrics: Dict[str, float] = field(default_factory=dict)
     hyperparams: Dict[str, Any] = field(default_factory=dict)
     extra: Dict[str, Any] = field(default_factory=dict)
+
+
+def find_latest_checkpoint_epoch(checkpoint_dir):
+    if not os.path.exists(checkpoint_dir):
+        return None
+    files = [f for f in os.listdir(checkpoint_dir) if f.startswith("model_epoch") and f.endswith(".pth")]
+    epochs = []
+    for f in files:
+        try:
+            epoch_num = int(f.replace("model_epoch", "").replace(".pth", ""))
+            epochs.append(epoch_num)
+        except ValueError:
+            continue
+    return max(epochs) if epochs else 0
+
+
+def compute_training_signature(model, optimizer, loss_fn, config):
+    payload = config.copy()
+    payload["__model"] = type(model).__name__
+    payload["__optimizer"] = type(optimizer).__name__
+    payload["__optimizer_params"] = optimizer.param_groups
+    payload["__loss_fn"] = type(loss_fn).__name__
+    # __loss_fn_params might throw.
+    # Leaving it like this because I want to know if someone encounters this situation.
+    payload["__loss_fn_params"] = loss_fn.__dict__ or inspect.signature(loss_fn)
+    serialized = json.dumps(payload, sort_keys=True, default=str)
+    return hashlib.sha256(serialized.encode()).hexdigest()[:16]

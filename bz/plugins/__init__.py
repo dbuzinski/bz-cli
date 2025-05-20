@@ -101,13 +101,15 @@ class ConsoleOutPlugin(Plugin):
         print(f"\nTotal Epochs\t\t: {context.epoch}")
         print(f"Total Time\t\t: {int(total_time // 60)}m {int(total_time % 60)}s")
 
-        print(f"Training Loss\t\t: {context.training_loss_total/context.training_batch_count:.4f}")
-        for name, val in context.training_metrics.items():
-            print(f"Training {name}\t: {val:.4f}")
-        print(f"Validation Loss\t\t: {context.validation_loss_total/context.validation_batch_count:.4f}")
-        for name, val in context.validation_metrics.items():
-            print(f"Validation {name}\t: {val:.4f}")
-        print("\n" + "=" * 26)
+        if context.training_batch_count:
+            print(f"Training Loss\t\t: {context.training_loss_total/context.training_batch_count:.4f}")
+            for name, val in context.training_metrics.items():
+                print(f"Training {name}\t: {val:.4f}")
+        if context.validation_batch_count:
+            print(f"Validation Loss\t\t: {context.validation_loss_total/context.validation_batch_count:.4f}")
+            for name, val in context.validation_metrics.items():
+                print(f"Validation {name}\t: {val:.4f}")
+            print("\n" + "=" * 26)
 
     @staticmethod
     def init(spec):

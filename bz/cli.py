@@ -2,6 +2,7 @@ import argparse
 import importlib.util
 import os
 import sys
+from dataclasses import dataclass
 
 from bz import Trainer
 from bz.plugins import default_plugins
@@ -33,7 +34,7 @@ def main():
     sys.path.pop(0)
 
     # Load train module to training specification and train
-    training_spec = TrainingSpecification.from_training_module(module)
+    training_spec = load_training_spec(module)
     trainer = Trainer()
     trainer.plugins = _load_optional(module, "plugins", default_plugins(training_spec))
     metrics = _load_optional(module, "metrics", [])
@@ -42,6 +43,7 @@ def main():
     trainer.train(training_spec.model, training_spec.optimizer, training_spec.loss_fn, training_spec.training_loader, validation_loader=training_spec.validation_loader, epochs=args.epochs, compile=compile, checkpoint_interval=args.checkpoint_interval, metrics=metrics)
 
 
+@dataclass
 class TrainingSpecification:
     def __init__(self, model, loss_fn, optimizer, training_loader, validation_loader):
         self.model = model
@@ -50,15 +52,15 @@ class TrainingSpecification:
         self.training_loader = training_loader
         self.validation_loader = validation_loader
 
-    @staticmethod
-    def from_training_module(module):
-        model = _load_required(module, "model")
-        loss_fn = _load_required(module, "loss_fn")
-        optimizer = _load_required(module, "optimizer")
-        training_loader = _load_required(module, "training_loader")
-        validation_loader = _load_optional(module, "validation_loader", None)
-        return TrainingSpecification(model, loss_fn, optimizer,
-                                     training_loader, validation_loader)
+
+def load_training_spec(module):
+    model = _load_required(module, "model")
+    loss_fn = _load_required(module, "loss_fn")
+    optimizer = _load_required(module, "optimizer")
+    training_loader = _load_required(module, "training_loader")
+    validation_loader = _load_optional(module, "validation_loader", None)
+    return TrainingSpecification(model, loss_fn, optimizer,
+                                 training_loader, validation_loader)
 
 
 def _load_required(module, attr):
