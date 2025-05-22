@@ -40,17 +40,26 @@ def main():
     metrics = _load_optional(module, "metrics", [])
 
     compile = not args.no_compile
-    trainer.train(training_spec.model, training_spec.optimizer, training_spec.loss_fn, training_spec.training_loader, validation_loader=training_spec.validation_loader, epochs=args.epochs, compile=compile, checkpoint_interval=args.checkpoint_interval, metrics=metrics)
+    trainer.train(training_spec.model,
+                  training_spec.optimizer, 
+                  training_spec.loss_fn, 
+                  training_spec.training_loader,
+                  validation_loader=training_spec.validation_loader,
+                  epochs=args.epochs,
+                  compile=compile,
+                  checkpoint_interval=args.checkpoint_interval,
+                  metrics=metrics)
 
 
 @dataclass
 class TrainingSpecification:
-    def __init__(self, model, loss_fn, optimizer, training_loader, validation_loader):
+    def __init__(self, model, loss_fn, optimizer, training_loader, validation_loader, hyperparameters):
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.training_loader = training_loader
         self.validation_loader = validation_loader
+        self.hyperparameters = hyperparameters
 
 
 def load_training_spec(module):
@@ -59,8 +68,9 @@ def load_training_spec(module):
     optimizer = _load_required(module, "optimizer")
     training_loader = _load_required(module, "training_loader")
     validation_loader = _load_optional(module, "validation_loader", None)
-    return TrainingSpecification(model, loss_fn, optimizer,
-                                 training_loader, validation_loader)
+    hyperparameters = _load_optional(module, "hyperparameters", {})
+    return TrainingSpecification(model, loss_fn, optimizer, training_loader,
+                                 validation_loader, hyperparameters)
 
 
 def _load_required(module, attr):
