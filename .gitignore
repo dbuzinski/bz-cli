@@ -2,4 +2,4 @@
 !.gitignore
 !.github
 *.pyc
-bz_cli.egg-info
+*.egg-info

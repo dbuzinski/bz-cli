@@ -1,0 +1,13 @@
+{
+  "lr": {
+    "name": "lr",
+    "type": "loguniform",
+    "low": 1e-5,
+    "high": 1e-1
+  },
+  "batch_size": {
+    "name": "batch_size",
+    "type": "categorical",
+    "choices": [64, 128, 256]
+  }
+}

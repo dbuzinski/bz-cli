@@ -80,10 +80,10 @@ def _load_required(module, attr):
     except AttributeError:
         raise Exception(f"{attr} must be specified")
 
+
 def _load_optional(module, attr, default_val):
     try:
         val = getattr(module, attr)
         return val
     except AttributeError:
         return default_val
-

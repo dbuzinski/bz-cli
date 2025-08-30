@@ -6,8 +6,6 @@ import torch
 from dataclasses import dataclass, field
 from typing import Dict, Any
 
-from torch.utils.data import dataloader
-
 
 default_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
