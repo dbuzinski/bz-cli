@@ -3,3 +3,4 @@
 !.github
 *.pyc
 *.egg-info
+site/

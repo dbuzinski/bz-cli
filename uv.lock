@@ -108,6 +108,7 @@ dependencies = [
     { name = "tensorboard" },
     { name = "torch" },
     { name = "tqdm" },
+    { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
@@ -124,6 +125,7 @@ dev = [
 dev = [
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
+    { name = "pymdown-extensions" },
     { name = "types-tqdm" },
 ]
 
@@ -140,6 +142,7 @@ requires-dist = [
     { name = "tensorboard", specifier = ">=2.19.0" },
     { name = "torch", specifier = ">=2.7.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
+    { name = "typing-extensions", specifier = ">=4.0.0" },
 ]
 provides-extras = ["dev"]
 
@@ -147,6 +150,7 @@ provides-extras = ["dev"]
 dev = [
     { name = "mkdocs-material", specifier = ">=9.6.18" },
     { name = "mkdocstrings", extras = ["python"], specifier = ">=0.30.0" },
+    { name = "pymdown-extensions", specifier = ">=10.0.0" },
     { name = "types-tqdm", specifier = ">=4.67.0.20250809" },
 ]
 

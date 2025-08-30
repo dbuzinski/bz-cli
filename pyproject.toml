@@ -13,6 +13,7 @@ dependencies = [
     "tensorboard>=2.19.0",
     "torch>=2.7.0",
     "tqdm>=4.67.1",
+    "typing-extensions>=4.0.0",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +40,7 @@ dev = [
     "mkdocs-material>=9.6.18",
     "mkdocstrings[python]>=0.30.0",
     "types-tqdm>=4.67.0.20250809",
+    "pymdown-extensions>=10.0.0",
 ]
 
 [tool.ruff]

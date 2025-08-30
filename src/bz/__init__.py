@@ -4,8 +4,12 @@ import json
 import os
 import torch
 from dataclasses import dataclass, field
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
+import logging
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 default_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -13,6 +17,7 @@ default_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class Trainer:
     def __init__(self):
         self.plugins = []
+        self.logger = logger
 
     def add_plugin(self, plugin):
         self.plugins.append(plugin)
@@ -30,9 +35,16 @@ class Trainer:
         checkpoint_interval=0,
         metrics=[],
         hyperparameters={},
+        early_stopping_patience=None,
+        early_stopping_min_delta=0.001,
     ):
         context = TrainingContext()
         context.hyperparameters = hyperparameters
+        
+        # Early stopping variables
+        best_validation_loss = float('inf')
+        patience_counter = 0
+        
         self.__run_stage("start_training_session", context)
 
         # Compute training signature and checkpoint directory
@@ -44,50 +56,73 @@ class Trainer:
         latest_checkpoint_epoch = find_latest_checkpoint_epoch(checkpoint_dir)
         if latest_checkpoint_epoch:
             checkpoint_path = os.path.join(checkpoint_dir, f"model_epoch{latest_checkpoint_epoch}.pth")
-            checkpoint = torch.load(checkpoint_path)
-            model.load_state_dict(checkpoint["model_state"])
-            optimizer.load_state_dict(checkpoint["optimizer_state"])
-            loss_fn.load_state_dict(checkpoint["loss_fn_state"])
-            training_loader.generator.set_state(checkpoint["generator_state"])
-            context.epoch = latest_checkpoint_epoch
-            context.extra["start_epoch"] = latest_checkpoint_epoch
-            context.extra["checkpoint_path"] = checkpoint_path
-            self.__run_stage("load_checkpoint", context)
+            try:
+                checkpoint = torch.load(checkpoint_path, map_location=device)
+                model.load_state_dict(checkpoint["model_state"])
+                optimizer.load_state_dict(checkpoint["optimizer_state"])
+                if "loss_fn_state" in checkpoint:
+                    loss_fn.load_state_dict(checkpoint["loss_fn_state"])
+                if "generator_state" in checkpoint and hasattr(training_loader, 'generator'):
+                    training_loader.generator.set_state(checkpoint["generator_state"])
+                context.epoch = latest_checkpoint_epoch
+                context.extra["start_epoch"] = latest_checkpoint_epoch
+                context.extra["checkpoint_path"] = checkpoint_path
+                self.__run_stage("load_checkpoint", context)
+                self.logger.info(f"Resumed training from epoch {latest_checkpoint_epoch}")
+            except Exception as e:
+                self.logger.warning(f"Failed to load checkpoint: {e}")
 
         # compile model
         if compile:
-            model.compile()
+            try:
+                model.compile()
+                self.logger.info("Model compiled successfully")
+            except Exception as e:
+                self.logger.warning(f"Model compilation failed: {e}")
+
         os.makedirs(checkpoint_dir, exist_ok=True)
         # set model to training mode
         model.train()
         model.to(device)
+        
         for epoch in range(context.epoch, epochs):
             self.__run_stage("start_epoch", context)
             self.__run_stage("start_training_loop", context)
+            
             # reset metrics for training loop
             for metric in metrics:
                 metric.reset()
                 context.training_metrics[metric.name] = 0.0
             context.training_loss_total = 0.0
             context.training_batch_count = 0
+            
             for batch_data, batch_labels in training_loader:
                 self.__run_stage("start_training_batch", context)
-                optimizer.zero_grad(set_to_none=True)
-                batch_data = batch_data.to(device)
-                batch_labels = batch_labels.to(device)
-                preds = model(batch_data)
-                loss = loss_fn(preds, batch_labels)
-                loss.backward()
-                optimizer.step()
-                # update loss and metrics
-                with torch.no_grad():
-                    for metric in metrics:
-                        metric.update(preds.detach().cpu(), batch_labels.detach().cpu())
-                        context.training_metrics[metric.name] = metric.compute()
-                    context.training_loss_total += loss.item()
-                    context.training_batch_count += 1
+                try:
+                    optimizer.zero_grad(set_to_none=True)
+                    batch_data = batch_data.to(device)
+                    batch_labels = batch_labels.to(device)
+                    preds = model(batch_data)
+                    loss = loss_fn(preds, batch_labels)
+                    loss.backward()
+                    optimizer.step()
+                    
+                    # update loss and metrics
+                    with torch.no_grad():
+                        for metric in metrics:
+                            metric.update(preds.detach().cpu(), batch_labels.detach().cpu())
+                            context.training_metrics[metric.name] = metric.compute()
+                        context.training_loss_total += loss.item()
+                        context.training_batch_count += 1
+                except Exception as e:
+                    self.logger.error(f"Error in training batch: {e}")
+                    continue
+                    
                 self.__run_stage("end_training_batch", context)
+                
             self.__run_stage("end_training_loop", context)
+            
+            # Validation loop
             if validation_loader:
                 model.eval()
                 with torch.no_grad():
@@ -97,44 +132,86 @@ class Trainer:
                         context.validation_metrics[metric.name] = 0.0
                     context.validation_loss_total = 0.0
                     context.validation_batch_count = 0
+                    
                     self.__run_stage("start_validation_loop", context)
                     for batch_inputs, batch_labels in validation_loader:
                         self.__run_stage("start_validation_batch", context)
-                        batch_inputs = batch_inputs.to(device)
-                        batch_labels = batch_labels.to(device)
-                        preds = model(batch_inputs)
-                        loss = loss_fn(preds, batch_labels)
-                        # update loss and metrics
-                        for metric in metrics:
-                            metric.update(preds.detach().cpu(), batch_labels.detach().cpu())
-                            context.validation_metrics[metric.name] = metric.compute()
-                        context.validation_loss_total += loss.item()
-                        context.validation_batch_count += 1
+                        try:
+                            batch_inputs = batch_inputs.to(device)
+                            batch_labels = batch_labels.to(device)
+                            preds = model(batch_inputs)
+                            loss = loss_fn(preds, batch_labels)
+                            
+                            # update loss and metrics
+                            for metric in metrics:
+                                metric.update(preds.detach().cpu(), batch_labels.detach().cpu())
+                                context.validation_metrics[metric.name] = metric.compute()
+                            context.validation_loss_total += loss.item()
+                            context.validation_batch_count += 1
+                        except Exception as e:
+                            self.logger.error(f"Error in validation batch: {e}")
+                            continue
+                            
                         self.__run_stage("end_validation_batch", context)
                     self.__run_stage("end_validation_loop", context)
+                
+                # Early stopping check
+                if early_stopping_patience and context.validation_batch_count > 0:
+                    current_validation_loss = context.validation_loss_total / context.validation_batch_count
+                    if current_validation_loss < best_validation_loss - early_stopping_min_delta:
+                        best_validation_loss = current_validation_loss
+                        patience_counter = 0
+                        # Save best model
+                        best_model_path = os.path.join(checkpoint_dir, "best_model.pth")
+                        torch.save({
+                            "model_state": model.state_dict(),
+                            "optimizer_state": optimizer.state_dict(),
+                            "epoch": context.epoch,
+                            "validation_loss": best_validation_loss,
+                        }, best_model_path)
+                        self.logger.info(f"New best model saved with validation loss: {best_validation_loss:.4f}")
+                    else:
+                        patience_counter += 1
+                        self.logger.info(f"Early stopping patience: {patience_counter}/{early_stopping_patience}")
+                        
+                        if patience_counter >= early_stopping_patience:
+                            self.logger.info("Early stopping triggered")
+                            break
+                
+                model.train()  # Set back to training mode
+                
             # Save the model checkpoint
             if checkpoint_interval and (epoch + 1) % checkpoint_interval == 0:
                 checkpoint_path = os.path.join(checkpoint_dir, f"model_epoch{epoch+1}.pth")
-                torch.save(
-                    {
-                        "model_state": model.state_dict(),
-                        "optimizer_state": optimizer.state_dict(),
-                        "loss_fn_state": loss_fn.state_dict(),
-                        "generator_state": training_loader.generator.get_state(),
-                    },
-                    checkpoint_path,
-                )
-                context.extra["checkpoint_path"] = checkpoint_path
-                self.__run_stage("save_checkpoint", context)
+                try:
+                    torch.save(
+                        {
+                            "model_state": model.state_dict(),
+                            "optimizer_state": optimizer.state_dict(),
+                            "loss_fn_state": loss_fn.state_dict(),
+                            "generator_state": training_loader.generator.get_state() if hasattr(training_loader, 'generator') else None,
+                        },
+                        checkpoint_path,
+                    )
+                    context.extra["checkpoint_path"] = checkpoint_path
+                    self.__run_stage("save_checkpoint", context)
+                except Exception as e:
+                    self.logger.error(f"Failed to save checkpoint: {e}")
 
             self.__run_stage("end_epoch", context)
             # Update context fields
             context.epoch += 1
+            
         self.__run_stage("end_training_session", context)
 
     def __run_stage(self, stage_name, context):
+        """Run a training stage across all plugins with error handling."""
         for plugin in self.plugins:
-            plugin.run_stage(stage_name, context)
+            try:
+                plugin.run_stage(stage_name, context)
+            except Exception as e:
+                self.logger.error(f"Plugin {plugin.__class__.__name__} failed in stage {stage_name}: {e}")
+                # Continue with other plugins instead of failing completely
 
 
 @dataclass(slots=True)
