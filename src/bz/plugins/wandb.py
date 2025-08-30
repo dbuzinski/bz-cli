@@ -46,7 +46,7 @@ class WandBPlugin(Plugin):
             return
 
         try:
-            import wandb # type: ignore
+            import wandb  # type: ignore
 
             # Initialize wandb run
             wandb_config = {

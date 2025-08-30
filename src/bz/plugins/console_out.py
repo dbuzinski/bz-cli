@@ -148,7 +148,7 @@ class ConsoleOutPlugin(Plugin):
         print()
 
         # Print status
-        for label, val in summary_item.items(): # type: ignore
+        for label, val in summary_item.items():  # type: ignore
             print(f" {label.ljust(ljust_len)}: {val}")
 
         # Print footer
