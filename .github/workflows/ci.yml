@@ -8,7 +8,7 @@ on:
     paths-ignore: ['docs/**', 'README.md']
 
 jobs:
-  tests:
+  test:
     name: Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
@@ -31,5 +31,5 @@ jobs:
           uv run ruff check src tests
           uv run black --check src tests
           uv run mypy src
-      - name: Run tests
+      - name: Tests
         run: uv run --locked pytest
