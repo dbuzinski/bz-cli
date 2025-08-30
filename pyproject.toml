@@ -1,9 +1,11 @@
 [project]
 name = "bz-cli"
 version = "0.1.0"
-description = "A"
+description = "A tool for reproducible and efficient training of AI models."
 readme = "README.md"
-requires-python = ">=3.13"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+
 dependencies = [
     "numpy>=2.2.5",
     "optuna>=4.3.0",
@@ -13,9 +15,31 @@ dependencies = [
     "tqdm>=4.67.1",
 ]
 
-[tool.setuptools.packages.find]
-where = ["./src"]
-include = ["bz", "bz.plugins", "bz.metrics"]
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "ruff",
+    "mypy",
+    "ipython",
+]
 
 [project.scripts]
 bz = "bz.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bz"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.black]
+line-length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
