@@ -1,46 +1,55 @@
-# bz CLI
+# BZ CLI - Enhanced Machine Learning Training Framework
 
-A powerful and extensible tool for reproducible and efficient training of AI models with a plugin-based architecture.
+A powerful, extensible Python package for training machine learning models with a plugin-based architecture that makes the training loop extensible and customizable.
 
-## Features
+## 🚀 Features
 
-- **🔄 Extensible Plugin System**: Hook into training lifecycle with custom plugins
-- **📊 Rich Metrics**: Built-in and custom metrics for model evaluation
-- **⚙️ Unified Configuration**: Type-safe configuration system with validation
-- **🛡️ Error Handling**: Robust error handling and recovery
-- **📈 Monitoring**: Integration with TensorBoard, WandB, and other tools
-- **💾 Checkpointing**: Automatic model checkpointing and resumption
-- **🚀 Early Stopping**: Built-in early stopping with configurable patience
-- **🎯 CLI Commands**: Intuitive command-line interface
+### Core Features
+- **Extensible Plugin System**: Hook into any part of the training lifecycle
+- **Comprehensive Metrics System**: Built-in and custom metrics with easy registration
+- **Robust Configuration Management**: Environment-based configs with validation
+- **Advanced Error Handling**: Graceful plugin failures and recovery
+- **Checkpoint Management**: Automatic checkpointing and resuming
+- **Early Stopping**: Configurable early stopping with patience and minimum delta
 
-## Quick Start
+### Plugin System
+- **Plugin Registry**: Dynamic plugin discovery and loading
+- **Plugin Dependencies**: Manage dependencies between plugins
+- **Plugin Configuration**: JSON/YAML configuration for plugins
+- **Built-in Plugins**:
+  - **Console Output**: Formatted training progress with tqdm
+  - **TensorBoard**: Integration with TensorBoard for visualization
+  - **Weights & Biases**: Experiment tracking and model versioning
 
-### Installation
+### Configuration Management
+- **Environment Support**: Different configs for dev/staging/prod
+- **Schema Validation**: Type-safe configuration with validation
+- **Deep Merging**: Intelligent config merging with defaults
+- **Plugin Dependencies**: Automatic dependency resolution
+
+## 📦 Installation
 
 ```bash
 pip install bz-cli
 ```
 
-### Basic Usage
+## 🎯 Quick Start
 
-1. **Initialize a project**:
-   ```bash
-   bz init
-   ```
+### 1. Initialize a Project
 
-2. **Train a model**:
-   ```bash
-   bz train
-   ```
+```bash
+bz init
+```
 
-3. **Train with custom config**:
-   ```bash
-   bz train --config my_config.json --epochs 10
-   ```
+This creates:
+- `train.py` - Your training script
+- `bz_config.json` - Configuration file
+- `model.py` - Model definition
+- `README.md` - Project documentation
 
-## Configuration
+### 2. Configure Your Training
 
-The `bz` CLI uses a unified configuration system. Create a `bz_config.json` file:
+Edit `bz_config.json`:
 
 ```json
 {
@@ -51,18 +60,29 @@ The `bz` CLI uses a unified configuration system. Create a `bz_config.json` file
     "device": "auto",
     "compile": true,
     "checkpoint_interval": 5,
-    "early_stopping_patience": 3
+    "early_stopping_patience": 3,
+    "early_stopping_min_delta": 0.001
   },
   "plugins": {
     "console_out": {
       "enabled": true,
-      "config": {}
+      "config": {},
+      "dependencies": []
     },
     "tensorboard": {
       "enabled": true,
       "config": {
         "log_dir": "runs/experiment"
-      }
+      },
+      "dependencies": []
+    },
+    "wandb": {
+      "enabled": false,
+      "config": {
+        "project_name": "my-experiment",
+        "entity": "my-username"
+      },
+      "dependencies": []
     }
   },
   "metrics": {
@@ -71,60 +91,14 @@ The `bz` CLI uses a unified configuration system. Create a `bz_config.json` file
   "hyperparameters": {
     "lr": 0.001,
     "batch_size": 64
-  }
+  },
+  "environment": "development"
 }
 ```
 
-## Plugin System
+### 3. Define Your Training
 
-### Built-in Plugins
-
-- **ConsoleOutPlugin**: Progress bars and training summaries
-- **TensorBoardPlugin**: Logging to TensorBoard
-- **WandBPlugin**: Integration with Weights & Biases (coming soon)
-
-### Creating Custom Plugins
-
-```python
-from bz.plugins import Plugin
-
-class MyCustomPlugin(Plugin):
-    def start_training_session(self, context):
-        print("Training started!")
-    
-    def end_epoch(self, context):
-        print(f"Epoch {context.epoch} completed")
-        print(f"Training loss: {context.training_loss_total / context.training_batch_count}")
-```
-
-## Metrics System
-
-### Built-in Metrics
-
-- **Accuracy**: Classification accuracy
-- **Precision**: Classification precision
-- **Recall**: Classification recall
-- **F1Score**: F1 score for classification
-- **MeanSquaredError**: MSE for regression
-- **MeanAbsoluteError**: MAE for regression
-- **TopKAccuracy**: Top-K accuracy for classification
-
-### Using Metrics
-
-```python
-from bz.metrics import Accuracy, Precision, get_metric
-
-# Direct instantiation
-metrics = [Accuracy(), Precision()]
-
-# Using registry
-accuracy = get_metric("accuracy")
-precision = get_metric("precision", average="macro")
-```
-
-## Training Script
-
-Create a `train.py` file in your project directory:
+Edit `train.py`:
 
 ```python
 import torch
@@ -132,7 +106,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from model import MyModel
-from bz.metrics import Accuracy
+from bz.metrics import Accuracy, Precision, Recall
 from bz.config import get_config_manager
 
 # Load configuration
@@ -175,71 +149,258 @@ optimizer = torch.optim.Adam(
 )
 
 # Define metrics
-metrics = [Accuracy()]
+metrics = [Accuracy(), Precision(), Recall()]
 ```
 
-## CLI Commands
+### 4. Start Training
 
-### `bz train`
+```bash
+bz train
+```
 
-Train a model with the current configuration.
+## 🔧 Advanced Usage
 
-**Options:**
-- `--epochs`: Number of training epochs
-- `--checkpoint-interval`: Checkpoint save interval
-- `--no-compile`: Disable model compilation
-- `--config`: Path to configuration file
-- `--device`: Device to use (auto/cpu/cuda)
+### Environment-Based Configuration
 
-### `bz init`
+Create environment-specific configs:
 
-Initialize a new project with templates.
+```bash
+# Development
+bz_config.development.json
 
-**Options:**
-- `--template`: Template to use (basic/advanced)
+# Staging  
+bz_config.staging.json
 
-### `bz validate`
+# Production
+bz_config.production.json
+```
 
-Validate a trained model (coming soon).
+Set the environment:
 
-## Examples
+```bash
+export BZ_ENV=production
+bz train
+```
 
-Check out the `examples/` directory for complete working examples:
+### Custom Plugins
 
-- **Fashion MNIST**: Basic image classification
-- **Configuration examples**: Different config formats
-- **Plugin examples**: Custom plugin implementations
+Create your own plugin:
 
-## Development
+```python
+from bz.plugins import Plugin, PluginContext
 
-### Running Tests
+class MyCustomPlugin(Plugin):
+    def __init__(self, config=None):
+        super().__init__(config=config)
+        self.custom_value = config.get("custom_value", "default")
+    
+    def start_training_session(self, context: PluginContext) -> None:
+        print(f"Starting training with custom value: {self.custom_value}")
+    
+    def end_epoch(self, context: PluginContext) -> None:
+        print(f"Epoch {context.epoch} completed!")
+
+# Register your plugin
+from bz.plugins import register_plugin
+register_plugin("my_custom", MyCustomPlugin, {"custom_value": "hello"})
+```
+
+### Custom Metrics
+
+Create custom metrics:
+
+```python
+from bz.metrics import Metric
+import torch
+from torch import Tensor
+
+class CustomMetric(Metric):
+    def __init__(self, name: str = None):
+        super().__init__(name)
+        self.total_value = 0.0
+        self.count = 0
+    
+    def reset(self) -> None:
+        self.total_value = 0.0
+        self.count = 0
+    
+    def update(self, preds: Tensor, targets: Tensor) -> None:
+        # Your custom metric calculation
+        self.total_value += torch.sum(preds).item()
+        self.count += preds.numel()
+    
+    def compute(self) -> float:
+        return self.total_value / self.count if self.count > 0 else 0.0
+```
+
+### Command Line Options
+
+```bash
+# Basic training
+bz train
+
+# Custom epochs and device
+bz train --epochs 20 --device cuda
+
+# Custom config file
+bz train --config my_config.json
+
+# Early stopping
+bz train --early-stopping-patience 5 --early-stopping-min-delta 0.01
+
+# List available plugins
+bz list-plugins
+
+# List available metrics
+bz list-metrics
+```
+
+## 🧪 Testing
+
+Run the comprehensive test suite:
 
 ```bash
 pytest tests/
 ```
 
-### Code Quality
+The test suite covers:
+- Plugin system functionality
+- Configuration management
+- CLI functionality
+- Trainer components
+- Metrics system
+- Error handling
 
-```bash
-# Format code
-black src/ tests/
+## 📚 API Reference
 
-# Lint code
-ruff check src/ tests/
+### Core Classes
 
-# Type checking
-mypy src/
+#### `Trainer`
+Main training class with plugin support and error handling.
+
+#### `Plugin`
+Base class for all plugins with lifecycle hooks.
+
+#### `PluginContext`
+Context object passed to plugins during training.
+
+#### `ConfigManager`
+Manages configuration loading, validation, and environment support.
+
+### Plugin Lifecycle Hooks
+
+- `start_training_session()` - Called at training start
+- `load_checkpoint()` - Called when loading checkpoints
+- `start_epoch()` - Called at each epoch start
+- `start_training_loop()` - Called at training loop start
+- `start_training_batch()` - Called at each training batch
+- `end_training_batch()` - Called at each training batch end
+- `end_training_loop()` - Called at training loop end
+- `start_validation_loop()` - Called at validation loop start
+- `start_validation_batch()` - Called at each validation batch
+- `end_validation_batch()` - Called at each validation batch end
+- `end_validation_loop()` - Called at validation loop end
+- `save_checkpoint()` - Called when saving checkpoints
+- `end_epoch()` - Called at each epoch end
+- `end_training_session()` - Called at training end
+
+## 🔌 Built-in Plugins
+
+### Console Output Plugin
+Provides formatted console output with progress bars.
+
+**Configuration:**
+```json
+{
+  "console_out": {
+    "enabled": true,
+    "config": {
+      "update_interval": 1
+    }
+  }
+}
 ```
 
-## Contributing
+### TensorBoard Plugin
+Integrates with TensorBoard for training visualization.
+
+**Configuration:**
+```json
+{
+  "tensorboard": {
+    "enabled": true,
+    "config": {
+      "log_dir": "runs/experiment"
+    }
+  }
+}
+```
+
+### Weights & Biases Plugin
+Integrates with Weights & Biases for experiment tracking.
+
+**Configuration:**
+```json
+{
+  "wandb": {
+    "enabled": true,
+    "config": {
+      "project_name": "my-experiment",
+      "entity": "my-username"
+    }
+  }
+}
+```
+
+## 📊 Built-in Metrics
+
+- `Accuracy` - Classification accuracy
+- `Precision` - Classification precision
+- `Recall` - Classification recall
+- `F1Score` - F1 score
+- `MeanSquaredError` - Regression MSE
+- `MeanAbsoluteError` - Regression MAE
+- `TopKAccuracy` - Top-K accuracy
+
+## 🛠️ Development
+
+### Project Structure
+
+```
+bz-cli/
+├── src/bz/
+│   ├── __init__.py          # Main trainer and core classes
+│   ├── cli.py              # Command-line interface
+│   ├── config.py           # Configuration management
+│   ├── metrics/            # Metrics system
+│   │   └── __init__.py
+│   └── plugins/            # Plugin system
+│       ├── __init__.py
+│       ├── plugin.py       # Base plugin class
+│       ├── console_out.py  # Console output plugin
+│       ├── tensorboard.py  # TensorBoard plugin
+│       └── wandb.py        # WandB plugin
+├── tests/                  # Test suite
+├── examples/               # Example projects
+└── docs/                   # Documentation
+```
+
+### Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests
-5. Submit a pull request
+4. Add tests for new functionality
+5. Run the test suite
+6. Submit a pull request
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🤝 Acknowledgments
+
+- Built on PyTorch for deep learning capabilities
+- Inspired by modern ML training frameworks
+- Community contributions and feedback
 

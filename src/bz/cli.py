@@ -1,3 +1,8 @@
+"""
+Command-line interface for bz CLI.
+Provides commands for training, validation, and project initialization.
+"""
+
 import argparse
 import importlib.util
 import os
@@ -6,6 +11,8 @@ from dataclasses import dataclass
 
 from bz import Trainer
 from bz.config import get_config_manager, ConfigManager
+from bz.plugins import load_plugins_from_config, get_plugin_registry
+from bz.metrics import get_metric, list_available_metrics
 
 
 def main():
@@ -20,6 +27,10 @@ def main():
             run_validation(args)
         elif args.command == "init":
             run_init(args)
+        elif args.command == "list-plugins":
+            run_list_plugins(args)
+        elif args.command == "list-metrics":
+            run_list_metrics(args)
         else:
             parser.print_help()
     except Exception as e:
@@ -39,6 +50,8 @@ Examples:
   bz train --config my_config.json  # Use custom config
   bz validate                 # Validate model
   bz init                     # Initialize project structure
+  bz list-plugins             # List available plugins
+  bz list-metrics             # List available metrics
         """,
     )
 
@@ -51,6 +64,8 @@ Examples:
     train_parser.add_argument("--no-compile", action="store_true", help="Disable model compilation")
     train_parser.add_argument("--config", type=str, help="Path to configuration file")
     train_parser.add_argument("--device", type=str, choices=["auto", "cpu", "cuda"], help="Device to use")
+    train_parser.add_argument("--early-stopping-patience", type=int, help="Early stopping patience")
+    train_parser.add_argument("--early-stopping-min-delta", type=float, help="Early stopping minimum delta")
 
     # Validate command
     validate_parser = subparsers.add_parser("validate", help="Validate a trained model")
@@ -62,6 +77,13 @@ Examples:
     init_parser.add_argument(
         "--template", type=str, choices=["basic", "advanced"], default="basic", help="Template to use"
     )
+
+    # List plugins command
+    list_plugins_parser = subparsers.add_parser("list-plugins", help="List available plugins")
+    list_plugins_parser.add_argument("--config", type=str, help="Path to configuration file")
+
+    # List metrics command
+    subparsers.add_parser("list-metrics", help="List available metrics")
 
     return parser
 
@@ -84,6 +106,10 @@ def run_training(args):
         training_config["compile"] = False
     if args.device:
         training_config["device"] = args.device
+    if args.early_stopping_patience is not None:
+        training_config["early_stopping_patience"] = args.early_stopping_patience
+    if args.early_stopping_min_delta is not None:
+        training_config["early_stopping_min_delta"] = args.early_stopping_min_delta
 
     # Import train.py as module
     train_path = "train.py"
@@ -119,7 +145,8 @@ def run_training(args):
     trainer = Trainer()
 
     # Load plugins based on configuration
-    plugins = load_plugins_from_config(config_manager, training_spec)
+    plugin_configs = config_manager.load().get("plugins", {})
+    plugins = load_plugins_from_config(plugin_configs, training_spec)
     trainer.plugins = plugins
 
     # Load metrics
@@ -131,7 +158,8 @@ def run_training(args):
     print(f"  Batch size: {training_config['batch_size']}")
     print(f"  Learning rate: {training_config['learning_rate']}")
     print(f"  Device: {training_config['device']}")
-    print(f"  Plugins: {[p.__class__.__name__ for p in plugins]}")
+    print(f"  Environment: {config_manager.get_environment()}")
+    print(f"  Plugins: {[p.name for p in plugins]}")
     print(f"  Metrics: {[m.name for m in metrics]}")
     print()
 
@@ -146,6 +174,8 @@ def run_training(args):
         checkpoint_interval=training_config["checkpoint_interval"],
         metrics=metrics,
         hyperparameters=config_manager.get_hyperparameters(),
+        early_stopping_patience=training_config.get("early_stopping_patience"),
+        early_stopping_min_delta=training_config.get("early_stopping_min_delta", 0.001),
     )
 
 
@@ -182,28 +212,38 @@ def run_init(args):
     print("3. Run 'bz train' to start training")
 
 
-def load_plugins_from_config(config_manager: ConfigManager, training_spec) -> list:
-    """Load plugins based on configuration."""
-    plugins = []
+def run_list_plugins(args):
+    """List available plugins."""
+    print("Available plugins:")
 
-    # Load enabled plugins
-    if config_manager.is_plugin_enabled("console_out"):
-        from bz.plugins import ConsoleOutPlugin
+    # Get registered plugins
+    registry = get_plugin_registry()
+    registered_plugins = registry.list_plugins()
 
-        plugin_config = config_manager.get_plugin_config("console_out")
-        plugins.append(ConsoleOutPlugin.init(training_spec))
+    for plugin_name in registered_plugins:
+        print(f"  - {plugin_name}")
 
-    if config_manager.is_plugin_enabled("tensorboard"):
-        from bz.plugins import TensorBoardPlugin
+    # Show configured plugins if config is provided
+    if args.config:
+        try:
+            config_manager = ConfigManager(config_path=args.config)
+            plugin_configs = config_manager.load().get("plugins", {})
 
-        plugin_config = config_manager.get_plugin_config("tensorboard")
-        if plugin_config:
-            log_dir = plugin_config.get("config", {}).get("log_dir", "runs/experiment")
-        else:
-            log_dir = "runs/experiment"
-        plugins.append(TensorBoardPlugin.init(training_spec, log_dir))
+            print("\nConfigured plugins:")
+            for plugin_name, config in plugin_configs.items():
+                status = "enabled" if config.get("enabled", True) else "disabled"
+                print(f"  - {plugin_name}: {status}")
 
-    return plugins
+        except Exception as e:
+            print(f"Error loading config: {e}")
+
+
+def run_list_metrics(args):
+    """List available metrics."""
+    print("Available metrics:")
+    metrics = list_available_metrics()
+    for metric_name in sorted(metrics):
+        print(f"  - {metric_name}")
 
 
 def load_metrics_from_config(config_manager: ConfigManager, module) -> list:
@@ -212,21 +252,12 @@ def load_metrics_from_config(config_manager: ConfigManager, module) -> list:
     metrics_config = config_manager.get_metrics_config()
 
     # Load built-in metrics
-    metric_map = {
-        "accuracy": "Accuracy",
-        "precision": "Precision",
-        "recall": "Recall",
-        "f1_score": "F1Score",
-        "mse": "MeanSquaredError",
-    }
-
     for metric_name in metrics_config.get("metrics", []):
-        if metric_name in metric_map:
-            import bz.metrics as metrics_module
-
-            metric_class = getattr(metrics_module, metric_map[metric_name], None)
-            if metric_class:
-                metrics.append(metric_class())
+        try:
+            metric = get_metric(metric_name)
+            metrics.append(metric)
+        except ValueError as e:
+            print(f"Warning: {e}")
 
     # Load custom metrics from module
     try:
@@ -351,18 +382,22 @@ def get_config_template() -> str:
     "learning_rate": 0.001,
     "device": "auto",
     "compile": true,
-    "checkpoint_interval": 5
+    "checkpoint_interval": 5,
+    "early_stopping_patience": null,
+    "early_stopping_min_delta": 0.001
   },
   "plugins": {
     "console_out": {
       "enabled": true,
-      "config": {}
+      "config": {},
+      "dependencies": []
     },
     "tensorboard": {
       "enabled": false,
       "config": {
         "log_dir": "runs/experiment"
-      }
+      },
+      "dependencies": []
     }
   },
   "metrics": {
@@ -371,7 +406,8 @@ def get_config_template() -> str:
   "hyperparameters": {
     "lr": 0.001,
     "batch_size": 64
-  }
+  },
+  "environment": "development"
 }
 """
 
@@ -426,4 +462,13 @@ This project uses the bz CLI for training machine learning models.
 ## Configuration
 
 Edit `bz_config.json` to customize training parameters, enable/disable plugins, and configure metrics.
+
+## Environment Configuration
+
+You can use different configurations for different environments:
+- Development: `bz_config.development.json`
+- Staging: `bz_config.staging.json`
+- Production: `bz_config.production.json`
+
+Set the `BZ_ENV` environment variable to specify the environment.
 """

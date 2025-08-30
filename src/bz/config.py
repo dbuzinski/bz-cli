@@ -8,6 +8,9 @@ import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 from typing_extensions import TypedDict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class PluginConfig(TypedDict, total=False):
@@ -15,6 +18,7 @@ class PluginConfig(TypedDict, total=False):
 
     enabled: bool
     config: Dict[str, Any]
+    dependencies: List[str]  # Plugin dependencies
 
 
 class TrainingConfig(TypedDict, total=False):
@@ -45,6 +49,7 @@ class BzConfig(TypedDict, total=False):
     metrics: MetricsConfig
     hyperparameters: Dict[str, Any]
     optuna: Optional[Dict[str, Any]]
+    environment: Optional[str]  # Environment name (dev, staging, prod)
 
 
 @dataclass
@@ -52,18 +57,39 @@ class ConfigManager:
     """Manages configuration loading, validation, and access."""
 
     config_path: Optional[str] = None
+    environment: Optional[str] = None
     _config: Optional[BzConfig] = None
 
     def __post_init__(self):
         if self.config_path is None:
             self.config_path = self._find_config_file()
+        if self.environment is None:
+            self.environment = self._get_environment()
 
-    def _find_config_file(self) -> Optional[str]:
+    def _get_environment(self) -> str:
+        """Get the current environment from environment variable."""
+        return os.environ.get("BZ_ENV", "development")
+
+    def _find_config_file(self) -> str:
         """Find the configuration file to use."""
         # Check environment variable first
         env_path = os.environ.get("BZ_CONFIG")
         if env_path and os.path.isfile(env_path):
             return env_path
+
+        # Check environment-specific config files
+        env = self._get_environment()
+        env_config_names = [
+            f"bz_config.{env}.json",
+            f"config.{env}.json",
+            f"bz.{env}.json",
+            f"bz.{env}.yaml",
+            f"bz.{env}.yml",
+        ]
+
+        for name in env_config_names:
+            if os.path.isfile(name):
+                return name
 
         # Check common config file names
         config_names = ["bz_config.json", "config.json", "bz.yaml", "bz.yml"]
@@ -71,7 +97,7 @@ class ConfigManager:
             if os.path.isfile(name):
                 return name
 
-        return None
+        return "bz_config.json"
 
     def load(self) -> BzConfig:
         """Load and validate configuration."""
@@ -91,7 +117,7 @@ class ConfigManager:
             return self._config
 
         except FileNotFoundError:
-            print(f"Warning: Config file {self.config_path} not found, using defaults")
+            logger.warning(f"Config file {self.config_path} not found, using defaults")
             self._config = self._get_default_config()
             return self._config
         except json.JSONDecodeError as e:
@@ -113,8 +139,8 @@ class ConfigManager:
                 "early_stopping_min_delta": 0.001,
             },
             "plugins": {
-                "console_out": {"enabled": True, "config": {}},
-                "tensorboard": {"enabled": False, "config": {"log_dir": "runs/experiment"}},
+                "console_out": {"enabled": True, "config": {}, "dependencies": []},
+                "tensorboard": {"enabled": False, "config": {"log_dir": "runs/experiment"}, "dependencies": []},
             },
             "metrics": {
                 "metrics": ["accuracy"],
@@ -122,6 +148,7 @@ class ConfigManager:
             },
             "hyperparameters": {},
             "optuna": None,
+            "environment": self.environment,
         }
 
     def _validate_and_merge(self, raw_config: Dict[str, Any]) -> BzConfig:
@@ -168,6 +195,19 @@ class ConfigManager:
             if device not in ["auto", "cpu", "cuda"]:
                 raise ValueError("device must be 'auto', 'cpu', or 'cuda'")
 
+        # Validate plugin dependencies
+        self._validate_plugin_dependencies(config.get("plugins", {}))
+
+    def _validate_plugin_dependencies(self, plugins: Dict[str, PluginConfig]) -> None:
+        """Validate plugin dependencies."""
+        plugin_names = set(plugins.keys())
+
+        for plugin_name, config in plugins.items():
+            dependencies = config.get("dependencies", [])
+            for dep in dependencies:
+                if dep not in plugin_names:
+                    raise ValueError(f"Plugin '{plugin_name}' depends on '{dep}' which is not configured")
+
     def get_training_config(self) -> TrainingConfig:
         """Get training configuration."""
         config = self.load()
@@ -193,6 +233,66 @@ class ConfigManager:
         """Check if a plugin is enabled."""
         plugin_config = self.get_plugin_config(plugin_name)
         return plugin_config is not None and plugin_config.get("enabled", True)
+
+    def get_enabled_plugins(self) -> List[str]:
+        """Get list of enabled plugins in dependency order."""
+        config = self.load()
+        plugins = config.get("plugins", {})
+
+        # Filter enabled plugins
+        enabled_plugins = {name: config for name, config in plugins.items() if config.get("enabled", True)}
+
+        # Sort by dependencies (topological sort)
+        return self._sort_plugins_by_dependencies(enabled_plugins)
+
+    def _sort_plugins_by_dependencies(self, plugins: Dict[str, PluginConfig]) -> List[str]:
+        """Sort plugins by their dependencies using topological sort."""
+        # Build dependency graph
+        graph = {name: set(config.get("dependencies", [])) for name, config in plugins.items()}
+
+        # Topological sort
+        result = []
+        visited = set()
+        temp_visited = set()
+
+        def visit(node: str) -> None:
+            if node in temp_visited:
+                raise ValueError(f"Circular dependency detected involving plugin '{node}'")
+            if node in visited:
+                return
+
+            temp_visited.add(node)
+
+            for dep in graph.get(node, set()):
+                if dep in plugins:  # Only visit dependencies that are enabled
+                    visit(dep)
+
+            temp_visited.remove(node)
+            visited.add(node)
+            result.append(node)
+
+        for plugin_name in plugins:
+            if plugin_name not in visited:
+                visit(plugin_name)
+
+        return result
+
+    def get_environment(self) -> str:
+        """Get the current environment."""
+        config = self.load()
+        return config.get("environment", "development") or "development"
+
+    def save_config(self, config: BzConfig, path: Optional[str] = None) -> None:
+        """Save configuration to file."""
+        if path is None:
+            path = self.config_path or "bz_config.json"
+
+        try:
+            with open(path, "w") as f:
+                json.dump(config, f, indent=2)
+            logger.info(f"Configuration saved to {path}")
+        except Exception as e:
+            raise ValueError(f"Failed to save configuration to {path}: {e}")
 
 
 # Backward compatibility function
