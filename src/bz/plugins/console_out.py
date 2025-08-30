@@ -18,9 +18,7 @@ class ConsoleOutPlugin(Plugin):
 
     def load_checkpoint(self, context):
         print()
-        print(
-            f"✓ Epoch {context.extra.get("start_epoch")} loaded from {context.extra.get("checkpoint_path")}"
-        )
+        print(f"✓ Epoch {context.extra.get("start_epoch")} loaded from {context.extra.get("checkpoint_path")}")
 
     def start_epoch(self, context):
         print()
