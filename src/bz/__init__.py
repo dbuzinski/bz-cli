@@ -36,18 +36,14 @@ class Trainer:
         self.__run_stage("start_training_session", context)
 
         # Compute training signature and checkpoint directory
-        training_signature = compute_training_signature(
-            model, optimizer, loss_fn, context.hyperparameters
-        )
+        training_signature = compute_training_signature(model, optimizer, loss_fn, context.hyperparameters)
         checkpoint_dir = os.path.join(".bz", "checkpoints", training_signature)
         os.makedirs(checkpoint_dir, exist_ok=True)
 
         # Try to resume from latest checkpoint
         latest_checkpoint_epoch = find_latest_checkpoint_epoch(checkpoint_dir)
         if latest_checkpoint_epoch:
-            checkpoint_path = os.path.join(
-                checkpoint_dir, f"model_epoch{latest_checkpoint_epoch}.pth"
-            )
+            checkpoint_path = os.path.join(checkpoint_dir, f"model_epoch{latest_checkpoint_epoch}.pth")
             checkpoint = torch.load(checkpoint_path)
             model.load_state_dict(checkpoint["model_state"])
             optimizer.load_state_dict(checkpoint["optimizer_state"])
@@ -110,9 +106,7 @@ class Trainer:
                         loss = loss_fn(preds, batch_labels)
                         # update loss and metrics
                         for metric in metrics:
-                            metric.update(
-                                preds.detach().cpu(), batch_labels.detach().cpu()
-                            )
+                            metric.update(preds.detach().cpu(), batch_labels.detach().cpu())
                             context.validation_metrics[metric.name] = metric.compute()
                         context.validation_loss_total += loss.item()
                         context.validation_batch_count += 1
@@ -120,9 +114,7 @@ class Trainer:
                     self.__run_stage("end_validation_loop", context)
             # Save the model checkpoint
             if checkpoint_interval and (epoch + 1) % checkpoint_interval == 0:
-                checkpoint_path = os.path.join(
-                    checkpoint_dir, f"model_epoch{epoch+1}.pth"
-                )
+                checkpoint_path = os.path.join(checkpoint_dir, f"model_epoch{epoch+1}.pth")
                 torch.save(
                     {
                         "model_state": model.state_dict(),
@@ -161,11 +153,7 @@ class TrainingContext:
 def find_latest_checkpoint_epoch(checkpoint_dir):
     if not os.path.exists(checkpoint_dir):
         return None
-    files = [
-        f
-        for f in os.listdir(checkpoint_dir)
-        if f.startswith("model_epoch") and f.endswith(".pth")
-    ]
+    files = [f for f in os.listdir(checkpoint_dir) if f.startswith("model_epoch") and f.endswith(".pth")]
     epochs = []
     for f in files:
         try:

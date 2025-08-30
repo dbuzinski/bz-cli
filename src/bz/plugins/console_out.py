@@ -36,9 +36,7 @@ class ConsoleOutPlugin(Plugin):
         self._training_bar.update(1)
         if (self._training_bar.n + 1) % self.update_interval == 0:
             postfix_dict = context.training_metrics.copy()
-            postfix_dict["loss"] = (
-                context.training_loss_total / context.training_batch_count
-            )
+            postfix_dict["loss"] = context.training_loss_total / context.training_batch_count
             self._training_bar.set_postfix(postfix_dict)
 
     def end_training_loop(self, context):
@@ -58,9 +56,7 @@ class ConsoleOutPlugin(Plugin):
         self._validation_bar.update(1)
         if (self._validation_bar.n + 1) % self.update_interval == 0:
             postfix_dict = context.validation_metrics.copy()
-            postfix_dict["loss"] = (
-                context.validation_loss_total / context.validation_batch_count
-            )
+            postfix_dict["loss"] = context.validation_loss_total / context.validation_batch_count
             self._validation_bar.set_postfix(postfix_dict)
 
     def end_validation_loop(self, context):
@@ -93,15 +89,11 @@ class ConsoleOutPlugin(Plugin):
             "Total Time": time_str,
         }
         if context.training_batch_count:
-            summary_item["Training Loss"] = (
-                f"{context.training_loss_total/context.training_batch_count:.4f}"
-            )
+            summary_item["Training Loss"] = f"{context.training_loss_total/context.training_batch_count:.4f}"
             for name, val in context.training_metrics.items():
                 summary_item[f"Training {name}"] = f"{val:.4f}"
         if context.validation_batch_count:
-            summary_item["Validation Loss"] = (
-                f"{context.validation_loss_total/context.validation_batch_count:.4f}"
-            )
+            summary_item["Validation Loss"] = f"{context.validation_loss_total/context.validation_batch_count:.4f}"
             for name, val in context.validation_metrics.items():
                 summary_item[f"Validation {name}"] = f"{val:.4f}"
 
@@ -126,6 +118,4 @@ class ConsoleOutPlugin(Plugin):
         validation_data_len = 0
         if spec.validation_loader:
             validation_data_len = len(spec.validation_loader)
-        return ConsoleOutPlugin(
-            len(spec.training_loader), validation_data_len=validation_data_len
-        )
+        return ConsoleOutPlugin(len(spec.training_loader), validation_data_len=validation_data_len)

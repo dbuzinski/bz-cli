@@ -9,9 +9,7 @@ from bz.plugins import default_plugins
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="A tool to help train machine learning models"
-    )
+    parser = argparse.ArgumentParser(description="A tool to help train machine learning models")
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--checkpoint-interval", type=int, default=0)
     parser.add_argument("--no-compile", action="store_true")
@@ -81,9 +79,7 @@ def load_training_spec(module):
     training_loader = _load_required(module, "training_loader")
     validation_loader = _load_optional(module, "validation_loader", None)
     hyperparameters = _load_optional(module, "hyperparameters", {})
-    return TrainingSpecification(
-        model, loss_fn, optimizer, training_loader, validation_loader, hyperparameters
-    )
+    return TrainingSpecification(model, loss_fn, optimizer, training_loader, validation_loader, hyperparameters)
 
 
 def _load_required(module, attr):
