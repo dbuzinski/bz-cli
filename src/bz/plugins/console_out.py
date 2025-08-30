@@ -66,7 +66,8 @@ class ConsoleOutPlugin(Plugin):
             self._validation_bar.close()
 
     def save_checkpoint(self, context):
-        print(f"✓ Checkpoint saved to {context.extra.get("checkpoint_path")}")
+        checkpoint = context.extra.get("checkpoint_path")
+        print(f"✓ Checkpoint saved to {checkpoint}")
 
     def end_training_session(self, context):
         # Epochs run formatting
