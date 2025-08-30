@@ -32,7 +32,7 @@ class Accuracy(Metric):
 
 
 class Precision(Metric):
-    def __init__(self, average='micro'):
+    def __init__(self, average="micro"):
         self.true_positives = 0
         self.predicted_positives = 0
         self.average = average

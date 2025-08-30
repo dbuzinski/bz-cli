@@ -17,20 +17,37 @@ class Trainer:
     def add_plugin(self, plugin):
         self.plugins.append(plugin)
 
-    def train(self, model, optimizer, loss_fn, training_loader, validation_loader=None, device=default_device, epochs=1, compile=True, checkpoint_interval=0, metrics=[], hyperparameters={}):
+    def train(
+        self,
+        model,
+        optimizer,
+        loss_fn,
+        training_loader,
+        validation_loader=None,
+        device=default_device,
+        epochs=1,
+        compile=True,
+        checkpoint_interval=0,
+        metrics=[],
+        hyperparameters={},
+    ):
         context = TrainingContext()
         context.hyperparameters = hyperparameters
         self.__run_stage("start_training_session", context)
 
         # Compute training signature and checkpoint directory
-        training_signature = compute_training_signature(model, optimizer, loss_fn, context.hyperparameters)
+        training_signature = compute_training_signature(
+            model, optimizer, loss_fn, context.hyperparameters
+        )
         checkpoint_dir = os.path.join(".bz", "checkpoints", training_signature)
         os.makedirs(checkpoint_dir, exist_ok=True)
 
         # Try to resume from latest checkpoint
         latest_checkpoint_epoch = find_latest_checkpoint_epoch(checkpoint_dir)
         if latest_checkpoint_epoch:
-            checkpoint_path = os.path.join(checkpoint_dir, f"model_epoch{latest_checkpoint_epoch}.pth")
+            checkpoint_path = os.path.join(
+                checkpoint_dir, f"model_epoch{latest_checkpoint_epoch}.pth"
+            )
             checkpoint = torch.load(checkpoint_path)
             model.load_state_dict(checkpoint["model_state"])
             optimizer.load_state_dict(checkpoint["optimizer_state"])
@@ -54,10 +71,10 @@ class Trainer:
             # reset metrics for training loop
             for metric in metrics:
                 metric.reset()
-                context.training_metrics[metric.name] = 0.
-            context.training_loss_total = 0.
+                context.training_metrics[metric.name] = 0.0
+            context.training_loss_total = 0.0
             context.training_batch_count = 0
-            for (batch_data, batch_labels) in training_loader:
+            for batch_data, batch_labels in training_loader:
                 self.__run_stage("start_training_batch", context)
                 optimizer.zero_grad(set_to_none=True)
                 batch_data = batch_data.to(device)
@@ -81,11 +98,11 @@ class Trainer:
                     # reset metrics for validation loop
                     for metric in metrics:
                         metric.reset()
-                        context.validation_metrics[metric.name] = 0.
-                    context.validation_loss_total = 0.
+                        context.validation_metrics[metric.name] = 0.0
+                    context.validation_loss_total = 0.0
                     context.validation_batch_count = 0
                     self.__run_stage("start_validation_loop", context)
-                    for (batch_inputs, batch_labels) in validation_loader:
+                    for batch_inputs, batch_labels in validation_loader:
                         self.__run_stage("start_validation_batch", context)
                         batch_inputs = batch_inputs.to(device)
                         batch_labels = batch_labels.to(device)
@@ -93,7 +110,9 @@ class Trainer:
                         loss = loss_fn(preds, batch_labels)
                         # update loss and metrics
                         for metric in metrics:
-                            metric.update(preds.detach().cpu(), batch_labels.detach().cpu())
+                            metric.update(
+                                preds.detach().cpu(), batch_labels.detach().cpu()
+                            )
                             context.validation_metrics[metric.name] = metric.compute()
                         context.validation_loss_total += loss.item()
                         context.validation_batch_count += 1
@@ -101,13 +120,18 @@ class Trainer:
                     self.__run_stage("end_validation_loop", context)
             # Save the model checkpoint
             if checkpoint_interval and (epoch + 1) % checkpoint_interval == 0:
-                checkpoint_path = os.path.join(checkpoint_dir, f"model_epoch{epoch+1}.pth")
-                torch.save({
-                    "model_state": model.state_dict(),
-                    "optimizer_state": optimizer.state_dict(),
-                    "loss_fn_state": loss_fn.state_dict(),
-                    "generator_state": training_loader.generator.get_state()
-                }, checkpoint_path)
+                checkpoint_path = os.path.join(
+                    checkpoint_dir, f"model_epoch{epoch+1}.pth"
+                )
+                torch.save(
+                    {
+                        "model_state": model.state_dict(),
+                        "optimizer_state": optimizer.state_dict(),
+                        "loss_fn_state": loss_fn.state_dict(),
+                        "generator_state": training_loader.generator.get_state(),
+                    },
+                    checkpoint_path,
+                )
                 context.extra["checkpoint_path"] = checkpoint_path
                 self.__run_stage("save_checkpoint", context)
 
@@ -124,8 +148,8 @@ class Trainer:
 @dataclass(slots=True)
 class TrainingContext:
     epoch: int = 0
-    training_loss_total: float = 0.
-    validation_loss_total: float = 0.
+    training_loss_total: float = 0.0
+    validation_loss_total: float = 0.0
     training_batch_count: int = 0
     validation_batch_count: int = 0
     training_metrics: Dict[str, float] = field(default_factory=dict)
@@ -137,7 +161,11 @@ class TrainingContext:
 def find_latest_checkpoint_epoch(checkpoint_dir):
     if not os.path.exists(checkpoint_dir):
         return None
-    files = [f for f in os.listdir(checkpoint_dir) if f.startswith("model_epoch") and f.endswith(".pth")]
+    files = [
+        f
+        for f in os.listdir(checkpoint_dir)
+        if f.startswith("model_epoch") and f.endswith(".pth")
+    ]
     epochs = []
     for f in files:
         try:
@@ -164,20 +192,20 @@ def compute_training_signature(model, optimizer, loss_fn, config):
 def load_config(path=None):
     # Load file if provided a path
     if path:
-        with open(path, 'r') as f:
+        with open(path, "r") as f:
             return json.load(f)
 
     # If BZ_CONFIG environment variable is set, load
     # the file it points to
     env_path = os.environ.get("BZ_CONFIG")
     if env_path and os.path.isfile(env_path):
-        with open(env_path, 'r') as f:
+        with open(env_path, "r") as f:
             return json.load(f)
 
     # Otherwise default to config.json in current folder
     default_path = "config.json"
     if os.path.isfile(default_path):
-        with open(default_path, 'r') as f:
+        with open(default_path, "r") as f:
             return json.load(f)
 
     return {}

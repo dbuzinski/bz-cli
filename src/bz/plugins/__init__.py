@@ -3,12 +3,7 @@ from .console_out import ConsoleOutPlugin
 from .tensorboard import TensorBoardPlugin
 
 
-__all__ = [
-    "Plugin",
-    "default_plugins",
-    "ConsoleOutPlugin",
-    "TensorBoardPlugin"
-]
+__all__ = ["Plugin", "default_plugins", "ConsoleOutPlugin", "TensorBoardPlugin"]
 
 
 def default_plugins(spec):
