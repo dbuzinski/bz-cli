@@ -4,7 +4,7 @@ import json
 import os
 import torch
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 import logging
 
 # Set up logging
@@ -40,11 +40,11 @@ class Trainer:
     ):
         context = TrainingContext()
         context.hyperparameters = hyperparameters
-        
+
         # Early stopping variables
-        best_validation_loss = float('inf')
+        best_validation_loss = float("inf")
         patience_counter = 0
-        
+
         self.__run_stage("start_training_session", context)
 
         # Compute training signature and checkpoint directory
@@ -62,7 +62,7 @@ class Trainer:
                 optimizer.load_state_dict(checkpoint["optimizer_state"])
                 if "loss_fn_state" in checkpoint:
                     loss_fn.load_state_dict(checkpoint["loss_fn_state"])
-                if "generator_state" in checkpoint and hasattr(training_loader, 'generator'):
+                if "generator_state" in checkpoint and hasattr(training_loader, "generator"):
                     training_loader.generator.set_state(checkpoint["generator_state"])
                 context.epoch = latest_checkpoint_epoch
                 context.extra["start_epoch"] = latest_checkpoint_epoch
@@ -84,18 +84,18 @@ class Trainer:
         # set model to training mode
         model.train()
         model.to(device)
-        
+
         for epoch in range(context.epoch, epochs):
             self.__run_stage("start_epoch", context)
             self.__run_stage("start_training_loop", context)
-            
+
             # reset metrics for training loop
             for metric in metrics:
                 metric.reset()
                 context.training_metrics[metric.name] = 0.0
             context.training_loss_total = 0.0
             context.training_batch_count = 0
-            
+
             for batch_data, batch_labels in training_loader:
                 self.__run_stage("start_training_batch", context)
                 try:
@@ -106,7 +106,7 @@ class Trainer:
                     loss = loss_fn(preds, batch_labels)
                     loss.backward()
                     optimizer.step()
-                    
+
                     # update loss and metrics
                     with torch.no_grad():
                         for metric in metrics:
@@ -117,11 +117,11 @@ class Trainer:
                 except Exception as e:
                     self.logger.error(f"Error in training batch: {e}")
                     continue
-                    
+
                 self.__run_stage("end_training_batch", context)
-                
+
             self.__run_stage("end_training_loop", context)
-            
+
             # Validation loop
             if validation_loader:
                 model.eval()
@@ -132,7 +132,7 @@ class Trainer:
                         context.validation_metrics[metric.name] = 0.0
                     context.validation_loss_total = 0.0
                     context.validation_batch_count = 0
-                    
+
                     self.__run_stage("start_validation_loop", context)
                     for batch_inputs, batch_labels in validation_loader:
                         self.__run_stage("start_validation_batch", context)
@@ -141,7 +141,7 @@ class Trainer:
                             batch_labels = batch_labels.to(device)
                             preds = model(batch_inputs)
                             loss = loss_fn(preds, batch_labels)
-                            
+
                             # update loss and metrics
                             for metric in metrics:
                                 metric.update(preds.detach().cpu(), batch_labels.detach().cpu())
@@ -151,10 +151,10 @@ class Trainer:
                         except Exception as e:
                             self.logger.error(f"Error in validation batch: {e}")
                             continue
-                            
+
                         self.__run_stage("end_validation_batch", context)
                     self.__run_stage("end_validation_loop", context)
-                
+
                 # Early stopping check
                 if early_stopping_patience and context.validation_batch_count > 0:
                     current_validation_loss = context.validation_loss_total / context.validation_batch_count
@@ -163,23 +163,26 @@ class Trainer:
                         patience_counter = 0
                         # Save best model
                         best_model_path = os.path.join(checkpoint_dir, "best_model.pth")
-                        torch.save({
-                            "model_state": model.state_dict(),
-                            "optimizer_state": optimizer.state_dict(),
-                            "epoch": context.epoch,
-                            "validation_loss": best_validation_loss,
-                        }, best_model_path)
+                        torch.save(
+                            {
+                                "model_state": model.state_dict(),
+                                "optimizer_state": optimizer.state_dict(),
+                                "epoch": context.epoch,
+                                "validation_loss": best_validation_loss,
+                            },
+                            best_model_path,
+                        )
                         self.logger.info(f"New best model saved with validation loss: {best_validation_loss:.4f}")
                     else:
                         patience_counter += 1
                         self.logger.info(f"Early stopping patience: {patience_counter}/{early_stopping_patience}")
-                        
+
                         if patience_counter >= early_stopping_patience:
                             self.logger.info("Early stopping triggered")
                             break
-                
+
                 model.train()  # Set back to training mode
-                
+
             # Save the model checkpoint
             if checkpoint_interval and (epoch + 1) % checkpoint_interval == 0:
                 checkpoint_path = os.path.join(checkpoint_dir, f"model_epoch{epoch+1}.pth")
@@ -189,7 +192,9 @@ class Trainer:
                             "model_state": model.state_dict(),
                             "optimizer_state": optimizer.state_dict(),
                             "loss_fn_state": loss_fn.state_dict(),
-                            "generator_state": training_loader.generator.get_state() if hasattr(training_loader, 'generator') else None,
+                            "generator_state": (
+                                training_loader.generator.get_state() if hasattr(training_loader, "generator") else None
+                            ),
                         },
                         checkpoint_path,
                     )
@@ -201,7 +206,7 @@ class Trainer:
             self.__run_stage("end_epoch", context)
             # Update context fields
             context.epoch += 1
-            
+
         self.__run_stage("end_training_session", context)
 
     def __run_stage(self, stage_name, context):

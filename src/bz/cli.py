@@ -3,18 +3,16 @@ import importlib.util
 import os
 import sys
 from dataclasses import dataclass
-from typing import Optional
 
 from bz import Trainer
 from bz.config import get_config_manager, ConfigManager
-from bz.plugins import default_plugins
 
 
 def main():
     """Main CLI entry point."""
     parser = create_parser()
     args = parser.parse_args()
-    
+
     try:
         if args.command == "train":
             run_training(args)
@@ -41,11 +39,11 @@ Examples:
   bz train --config my_config.json  # Use custom config
   bz validate                 # Validate model
   bz init                     # Initialize project structure
-        """
+        """,
     )
-    
+
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
-    
+
     # Train command
     train_parser = subparsers.add_parser("train", help="Train a model")
     train_parser.add_argument("--epochs", type=int, help="Number of training epochs")
@@ -53,17 +51,18 @@ Examples:
     train_parser.add_argument("--no-compile", action="store_true", help="Disable model compilation")
     train_parser.add_argument("--config", type=str, help="Path to configuration file")
     train_parser.add_argument("--device", type=str, choices=["auto", "cpu", "cuda"], help="Device to use")
-    
+
     # Validate command
     validate_parser = subparsers.add_parser("validate", help="Validate a trained model")
     validate_parser.add_argument("--model-path", type=str, help="Path to model checkpoint")
     validate_parser.add_argument("--config", type=str, help="Path to configuration file")
-    
+
     # Init command
     init_parser = subparsers.add_parser("init", help="Initialize project structure")
-    init_parser.add_argument("--template", type=str, choices=["basic", "advanced"], default="basic", 
-                           help="Template to use")
-    
+    init_parser.add_argument(
+        "--template", type=str, choices=["basic", "advanced"], default="basic", help="Template to use"
+    )
+
     return parser
 
 
@@ -73,10 +72,9 @@ def run_training(args):
     config_manager = get_config_manager()
     if args.config:
         config_manager = ConfigManager(config_path=args.config)
-    
-    config = config_manager.load()
+
     training_config = config_manager.get_training_config()
-    
+
     # Override config with command line arguments
     if args.epochs:
         training_config["epochs"] = args.epochs
@@ -86,17 +84,17 @@ def run_training(args):
         training_config["compile"] = False
     if args.device:
         training_config["device"] = args.device
-    
+
     # Import train.py as module
     train_path = "train.py"
     if not os.path.exists(train_path):
         print(f"Error: {train_path} not found in current directory")
         print("Please run this command from a directory containing train.py")
         sys.exit(1)
-    
+
     train_dir = os.path.dirname(os.path.abspath(train_path))
     sys.path.insert(0, train_dir)
-    
+
     try:
         spec = importlib.util.spec_from_file_location("bz_train", train_path)
         module = importlib.util.module_from_spec(spec)
@@ -109,26 +107,26 @@ def run_training(args):
         sys.exit(1)
     finally:
         sys.path.pop(0)
-    
+
     # Load training specification
     try:
         training_spec = load_training_spec(module)
     except Exception as e:
         print(f"Error loading training specification: {e}")
         sys.exit(1)
-    
+
     # Create trainer and load plugins
     trainer = Trainer()
-    
+
     # Load plugins based on configuration
     plugins = load_plugins_from_config(config_manager, training_spec)
     trainer.plugins = plugins
-    
+
     # Load metrics
     metrics = load_metrics_from_config(config_manager, module)
-    
+
     # Start training
-    print(f"Starting training with configuration:")
+    print("Starting training with configuration:")
     print(f"  Epochs: {training_config['epochs']}")
     print(f"  Batch size: {training_config['batch_size']}")
     print(f"  Learning rate: {training_config['learning_rate']}")
@@ -136,7 +134,7 @@ def run_training(args):
     print(f"  Plugins: {[p.__class__.__name__ for p in plugins]}")
     print(f"  Metrics: {[m.name for m in metrics]}")
     print()
-    
+
     trainer.train(
         training_spec.model,
         training_spec.optimizer,
@@ -160,7 +158,7 @@ def run_validation(args):
 def run_init(args):
     """Initialize project structure."""
     print(f"Initializing project with {args.template} template...")
-    
+
     # Create basic project structure
     files_to_create = {
         "train.py": get_train_template(),
@@ -168,15 +166,15 @@ def run_init(args):
         "model.py": get_model_template(),
         "README.md": get_readme_template(),
     }
-    
+
     for filename, content in files_to_create.items():
         if not os.path.exists(filename):
-            with open(filename, 'w') as f:
+            with open(filename, "w") as f:
                 f.write(content)
             print(f"✓ Created {filename}")
         else:
             print(f"⚠ {filename} already exists, skipping")
-    
+
     print("\nProject initialized successfully!")
     print("Next steps:")
     print("1. Edit train.py to define your model, data, and training setup")
@@ -187,19 +185,24 @@ def run_init(args):
 def load_plugins_from_config(config_manager: ConfigManager, training_spec) -> list:
     """Load plugins based on configuration."""
     plugins = []
-    
+
     # Load enabled plugins
     if config_manager.is_plugin_enabled("console_out"):
         from bz.plugins import ConsoleOutPlugin
+
         plugin_config = config_manager.get_plugin_config("console_out")
         plugins.append(ConsoleOutPlugin.init(training_spec))
-    
+
     if config_manager.is_plugin_enabled("tensorboard"):
         from bz.plugins import TensorBoardPlugin
+
         plugin_config = config_manager.get_plugin_config("tensorboard")
-        log_dir = plugin_config.get("config", {}).get("log_dir", "runs/experiment")
+        if plugin_config:
+            log_dir = plugin_config.get("config", {}).get("log_dir", "runs/experiment")
+        else:
+            log_dir = "runs/experiment"
         plugins.append(TensorBoardPlugin.init(training_spec, log_dir))
-    
+
     return plugins
 
 
@@ -207,30 +210,31 @@ def load_metrics_from_config(config_manager: ConfigManager, module) -> list:
     """Load metrics based on configuration."""
     metrics = []
     metrics_config = config_manager.get_metrics_config()
-    
+
     # Load built-in metrics
     metric_map = {
         "accuracy": "Accuracy",
-        "precision": "Precision", 
+        "precision": "Precision",
         "recall": "Recall",
         "f1_score": "F1Score",
         "mse": "MeanSquaredError",
     }
-    
+
     for metric_name in metrics_config.get("metrics", []):
         if metric_name in metric_map:
-            from bz.metrics import __dict__ as metrics_module
-            metric_class = metrics_module.get(metric_map[metric_name])
+            import bz.metrics as metrics_module
+
+            metric_class = getattr(metrics_module, metric_map[metric_name], None)
             if metric_class:
                 metrics.append(metric_class())
-    
+
     # Load custom metrics from module
     try:
         module_metrics = getattr(module, "metrics", [])
         metrics.extend(module_metrics)
     except AttributeError:
         pass
-    
+
     return metrics
 
 
@@ -281,7 +285,7 @@ def _load_optional(module, attr, default_val):
 
 # Template functions for project initialization
 def get_train_template() -> str:
-    return '''import torch
+    return """import torch
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
@@ -336,11 +340,11 @@ optimizer = torch.optim.Adam(
 
 # Define metrics
 metrics = [Accuracy()]
-'''
+"""
 
 
 def get_config_template() -> str:
-    return '''{
+    return """{
   "training": {
     "epochs": 10,
     "batch_size": 64,
@@ -369,11 +373,11 @@ def get_config_template() -> str:
     "batch_size": 64
   }
 }
-'''
+"""
 
 
 def get_model_template() -> str:
-    return '''import torch.nn as nn
+    return """import torch.nn as nn
 import torch.nn.functional as F
 
 class MyModel(nn.Module):
@@ -394,11 +398,11 @@ class MyModel(nn.Module):
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
-'''
+"""
 
 
 def get_readme_template() -> str:
-    return '''# My ML Project
+    return """# My ML Project
 
 This project uses the bz CLI for training machine learning models.
 
@@ -422,4 +426,4 @@ This project uses the bz CLI for training machine learning models.
 ## Configuration
 
 Edit `bz_config.json` to customize training parameters, enable/disable plugins, and configure metrics.
-'''
+"""
