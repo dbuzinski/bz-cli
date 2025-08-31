@@ -29,7 +29,7 @@ class WandBPlugin(Plugin):
         super().__init__(name=self.name, config=config, **kwargs)
         self.project_name = project_name
         self.entity = entity
-        self.run = None
+        self.run: Optional[Any] = None
         self._wandb_available = self._check_wandb_available()
 
     def _check_wandb_available(self) -> bool:
