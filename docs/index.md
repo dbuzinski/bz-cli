@@ -10,7 +10,6 @@ A powerful and extensible tool for reproducible and efficient training of AI mod
 - **🛡️ Error Handling**: Robust error handling and recovery
 - **📈 Monitoring**: Integration with TensorBoard, WandB, and other tools
 - **💾 Checkpointing**: Automatic model checkpointing and resumption
-- **🚀 Early Stopping**: Advanced early stopping with multiple strategies
 - **🎯 CLI Commands**: Intuitive command-line interface
 - **🔧 Type Safety**: Full MyPy type checking support
 
@@ -137,8 +136,4 @@ Check out the `examples/` directory for complete working examples:
 3. Make your changes
 4. Add tests
 5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
