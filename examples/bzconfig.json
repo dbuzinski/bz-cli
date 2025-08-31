@@ -1,0 +1,31 @@
+{
+  "epochs": 10,
+  "device": "auto",
+  "compile": true,
+  "checkpoint_interval": 5,
+  "hyperparameters": {
+    "lr": 0.001,
+    "batch_size": 64
+  },
+  "metrics": [
+    "accuracy",
+    "precision",
+    "recall"
+  ],
+  "plugins": [
+    "console_out",
+    {
+      "tensorboard": {
+        "enabled": true,
+        "log_dir": "runs/experiment"
+      }
+    },
+    {
+      "early_stopping": {
+        "enabled": false,
+        "patience": 5,
+        "min_delta": 0.001
+      }
+    }
+  ]
+}

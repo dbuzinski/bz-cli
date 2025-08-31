@@ -4,7 +4,7 @@ Provides formatted console output during training.
 """
 
 import time
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 from tqdm import tqdm
 
 from .plugin import Plugin, PluginContext
@@ -12,6 +12,8 @@ from .plugin import Plugin, PluginContext
 
 class ConsoleOutPlugin(Plugin):
     """Plugin for formatted console output during training."""
+
+    name = "console_out"  # Plugin name for discovery
 
     def __init__(self, training_data_len: int, validation_data_len: int = 0, update_interval: int = 1, **kwargs):
         """
@@ -155,12 +157,13 @@ class ConsoleOutPlugin(Plugin):
         print("\n" + "=" * total_len)
 
     @staticmethod
-    def init(spec) -> "ConsoleOutPlugin":
+    def init(spec, update_interval: int = 1) -> "ConsoleOutPlugin":
         """
         Create a ConsoleOutPlugin instance from training specification.
 
         Args:
             spec: Training specification containing data loaders
+            update_interval: How often to update progress bars
 
         Returns:
             Configured ConsoleOutPlugin instance
@@ -168,4 +171,17 @@ class ConsoleOutPlugin(Plugin):
         validation_data_len = 0
         if spec.validation_loader:
             validation_data_len = len(spec.validation_loader)
-        return ConsoleOutPlugin(len(spec.training_loader), validation_data_len=validation_data_len)
+        return ConsoleOutPlugin(
+            len(spec.training_loader), validation_data_len=validation_data_len, update_interval=update_interval
+        )
+
+    @staticmethod
+    def load_config(config_data: dict) -> Dict[str, Any]:
+        """Load configuration from dict data."""
+        return {"update_interval": config_data.get("update_interval", 1)}
+
+    @staticmethod
+    def create(config_data: dict, training_config) -> "ConsoleOutPlugin":
+        """Create plugin instance from config data."""
+        config = ConsoleOutPlugin.load_config(config_data)
+        return ConsoleOutPlugin.init(training_config, update_interval=config["update_interval"])

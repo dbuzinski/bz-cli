@@ -2,14 +2,12 @@
 Tests for bz CLI functionality.
 """
 
-import pytest
 import tempfile
 import os
 import json
-from unittest.mock import patch, MagicMock
-from bz.cli import create_parser, load_training_spec, TrainingSpecification, _load_required, _load_optional
-from bz.config import ConfigManager
-from bz.plugins import get_plugin_registry, Plugin
+from unittest.mock import patch
+from bz.cli import create_parser
+from bz import get_config, set_cli_config_path
 
 
 class TestCLI:
@@ -22,261 +20,135 @@ class TestCLI:
 
         # Test subparsers exist
         subparsers = list(parser._subparsers._group_actions[0].choices.keys())
-        expected_commands = ["train", "validate", "init", "list-plugins", "list-metrics"]
+        expected_commands = ["train", "validate", "init", "list-plugins", "list-metrics", "health"]
         assert all(cmd in subparsers for cmd in expected_commands)
 
-    def test_load_required_success(self):
-        """Test loading required attributes successfully."""
-        mock_module = MagicMock()
-        mock_module.test_attr = "test_value"
+    def test_train_parser_arguments(self):
+        """Test train command parser arguments."""
+        parser = create_parser()
+        train_parser = parser._subparsers._group_actions[0].choices["train"]
 
-        result = _load_required(mock_module, "test_attr")
-        assert result == "test_value"
+        # Check that train parser has expected arguments
+        train_args = [action.dest for action in train_parser._actions]
+        expected_args = [
+            "epochs",
+            "checkpoint_interval",
+            "no_compile",
+            "config",
+            "device",
+            "optimize",
+            "n_trials",
+            "study_name",
+        ]
+        assert all(arg in train_args for arg in expected_args)
 
-    def test_load_required_missing(self):
-        """Test loading required attributes that don't exist."""
-        mock_module = MagicMock()
-        del mock_module.test_attr
+    def test_validate_parser_arguments(self):
+        """Test validate command parser arguments."""
+        parser = create_parser()
+        validate_parser = parser._subparsers._group_actions[0].choices["validate"]
 
-        with pytest.raises(Exception, match="test_attr must be specified in train.py"):
-            _load_required(mock_module, "test_attr")
+        # Check that validate parser has expected arguments
+        validate_args = [action.dest for action in validate_parser._actions]
+        expected_args = ["model_path", "config"]
+        assert all(arg in validate_args for arg in expected_args)
 
-    def test_load_optional_success(self):
-        """Test loading optional attributes successfully."""
-        mock_module = MagicMock()
-        mock_module.test_attr = "test_value"
+    def test_init_parser_arguments(self):
+        """Test init command parser arguments."""
+        parser = create_parser()
+        init_parser = parser._subparsers._group_actions[0].choices["init"]
 
-        result = _load_optional(mock_module, "test_attr", "default")
-        assert result == "test_value"
+        # Check that init parser has expected arguments
+        init_args = [action.dest for action in init_parser._actions]
+        expected_args = ["template"]
+        assert all(arg in init_args for arg in expected_args)
 
-    def test_load_optional_missing(self):
-        """Test loading optional attributes that don't exist."""
-        mock_module = MagicMock()
-        del mock_module.test_attr
+    def test_list_plugins_parser_arguments(self):
+        """Test list-plugins command parser arguments."""
+        parser = create_parser()
+        list_plugins_parser = parser._subparsers._group_actions[0].choices["list-plugins"]
 
-        result = _load_optional(mock_module, "test_attr", "default")
-        assert result == "default"
+        # Check that list-plugins parser has expected arguments
+        list_plugins_args = [action.dest for action in list_plugins_parser._actions]
+        expected_args = ["config"]
+        assert all(arg in list_plugins_args for arg in expected_args)
 
-    def test_load_training_spec(self):
-        """Test loading training specification."""
-        mock_module = MagicMock()
-        mock_module.model = "model"
-        mock_module.loss_fn = "loss_fn"
-        mock_module.optimizer = "optimizer"
-        mock_module.training_loader = "training_loader"
-        mock_module.validation_loader = "validation_loader"
-        mock_module.hyperparameters = {"lr": 0.001}
+    def test_health_parser_arguments(self):
+        """Test health command parser arguments."""
+        parser = create_parser()
+        health_parser = parser._subparsers._group_actions[0].choices["health"]
 
-        spec = load_training_spec(mock_module)
-
-        assert isinstance(spec, TrainingSpecification)
-        assert spec.model == "model"
-        assert spec.loss_fn == "loss_fn"
-        assert spec.optimizer == "optimizer"
-        assert spec.training_loader == "training_loader"
-        assert spec.validation_loader == "validation_loader"
-        assert spec.hyperparameters == {"lr": 0.001}
-
-    def test_load_training_spec_missing_required(self):
-        """Test loading training specification with missing required attributes."""
-        mock_module = MagicMock()
-        mock_module.model = "model"
-        # Missing loss_fn
-        del mock_module.loss_fn
-
-        with pytest.raises(Exception, match="loss_fn must be specified in train.py"):
-            load_training_spec(mock_module)
-
-    def test_load_training_spec_optional_defaults(self):
-        """Test loading training specification with optional defaults."""
-        mock_module = MagicMock()
-        mock_module.model = "model"
-        mock_module.loss_fn = "loss_fn"
-        mock_module.optimizer = "optimizer"
-        mock_module.training_loader = "training_loader"
-        # Missing validation_loader and hyperparameters
-        del mock_module.validation_loader
-        del mock_module.hyperparameters
-
-        spec = load_training_spec(mock_module)
-
-        assert spec.validation_loader is None
-        assert spec.hyperparameters == {}
+        # Check that health parser has expected arguments
+        health_args = [action.dest for action in health_parser._actions]
+        expected_args = ["json"]
+        assert all(arg in health_args for arg in expected_args)
 
 
-class TestConfigManager:
-    """Test configuration management."""
+class TestTrainingConfigurationIntegration:
+    """Test CLI integration with TrainingConfiguration."""
 
-    def test_config_manager_defaults(self):
-        """Test ConfigManager with default configuration."""
-        with tempfile.TemporaryDirectory():
-            config_manager = ConfigManager()
-            config = config_manager.load()
+    def test_cli_config_path_setting(self):
+        """Test that CLI config path is properly set."""
+        # Test setting CLI config path
+        set_cli_config_path("test_config.json")
 
-            assert "training" in config
-            assert "plugins" in config
-            assert "metrics" in config
-            assert config["environment"] == "development"
+        # Verify it affects get_config behavior
+        with patch("os.path.exists", return_value=True):
+            with patch("builtins.open", create=True) as mock_open:
+                mock_open.return_value.__enter__.return_value.read.return_value = '{"epochs": 42}'
 
-    def test_config_manager_with_file(self):
-        """Test ConfigManager with configuration file."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            config_path = os.path.join(temp_dir, "test_config.json")
-            test_config = {
-                "training": {"epochs": 20, "batch_size": 128},
-                "plugins": {"console_out": {"enabled": True, "config": {}, "dependencies": []}},
-            }
+                config = get_config()
+                assert config.epochs == 42
 
-            with open(config_path, "w") as f:
-                json.dump(test_config, f)
+    def test_config_precedence_in_cli(self):
+        """Test configuration precedence in CLI context."""
+        # Set CLI config path
+        set_cli_config_path("cli_config.json")
 
-            config_manager = ConfigManager(config_path=config_path)
-            config = config_manager.load()
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            config_data = {"epochs": 100, "device": "cpu"}
+            json.dump(config_data, f)
+            config_path = f.name
 
-            assert config["training"]["epochs"] == 20
-            assert config["training"]["batch_size"] == 128
+        try:
+            with patch("os.path.exists", return_value=True):
+                with patch("builtins.open", create=True) as mock_open:
+                    mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(config_data)
 
-    def test_config_manager_environment_specific(self):
-        """Test ConfigManager with environment-specific configuration."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            # Create environment-specific config
-            env_config_path = os.path.join(temp_dir, "bz_config.test.json")
-            test_config = {"training": {"epochs": 50, "batch_size": 256}, "environment": "test"}
+                    config = get_config()
+                    assert config.epochs == 100
+                    assert config.device == "cpu"
 
-            with open(env_config_path, "w") as f:
-                json.dump(test_config, f)
-
-            # Set environment
-            with patch.dict(os.environ, {"BZ_ENV": "test"}):
-                config_manager = ConfigManager()
-                config_manager.config_path = env_config_path
-                config = config_manager.load()
-
-                assert config["training"]["epochs"] == 50
-                assert config["training"]["batch_size"] == 256
-                assert config["environment"] == "test"
-
-    def test_config_manager_validation(self):
-        """Test ConfigManager validation."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            config_path = os.path.join(temp_dir, "invalid_config.json")
-            invalid_config = {
-                "training": {"epochs": -1, "batch_size": 0}  # Invalid: negative epochs  # Invalid: zero batch size
-            }
-
-            with open(config_path, "w") as f:
-                json.dump(invalid_config, f)
-
-            config_manager = ConfigManager(config_path=config_path)
-
-            with pytest.raises(ValueError, match="epochs must be at least 1"):
-                config_manager.load()
-
-    def test_plugin_dependency_validation(self):
-        """Test plugin dependency validation."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            config_path = os.path.join(temp_dir, "dependency_config.json")
-            config_with_deps = {
-                "plugins": {
-                    "plugin_a": {"enabled": True, "config": {}, "dependencies": ["plugin_b"]},
-                    "plugin_b": {"enabled": True, "config": {}, "dependencies": []},
-                }
-            }
-
-            with open(config_path, "w") as f:
-                json.dump(config_with_deps, f)
-
-            config_manager = ConfigManager(config_path=config_path)
-            config = config_manager.load()
-
-            # Should not raise an error
-            assert "plugins" in config
-
-    def test_plugin_dependency_validation_missing(self):
-        """Test plugin dependency validation with missing dependency."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            config_path = os.path.join(temp_dir, "missing_dep_config.json")
-            config_with_missing_dep = {
-                "plugins": {"plugin_a": {"enabled": True, "config": {}, "dependencies": ["missing_plugin"]}}
-            }
-
-            with open(config_path, "w") as f:
-                json.dump(config_with_missing_dep, f)
-
-            config_manager = ConfigManager(config_path=config_path)
-
-            with pytest.raises(
-                ValueError, match="Plugin 'plugin_a' depends on 'missing_plugin' which is not configured"
-            ):
-                config_manager.load()
+        finally:
+            os.unlink(config_path)
 
 
-class TestPluginRegistry:
-    """Test plugin registry functionality."""
+class TestCLIErrorHandling:
+    """Test CLI error handling."""
 
-    def test_plugin_registry_register(self):
-        """Test plugin registration."""
-        registry = get_plugin_registry()
+    def test_parser_help(self):
+        """Test that parser help is properly formatted."""
+        parser = create_parser()
+        help_text = parser.format_help()
 
-        class TestPlugin(Plugin):
-            pass
+        # Check that help contains expected sections
+        assert "A tool to help train machine learning models" in help_text
+        assert "train" in help_text
+        assert "validate" in help_text
+        assert "init" in help_text
+        assert "list-plugins" in help_text
+        assert "list-metrics" in help_text
+        assert "health" in help_text
 
-        registry.register("test_plugin", TestPlugin)
-        assert "test_plugin" in registry.list_plugins()
+    def test_examples_in_help(self):
+        """Test that examples are included in help."""
+        parser = create_parser()
+        help_text = parser.format_help()
 
-    def test_plugin_registry_create(self):
-        """Test plugin creation."""
-        registry = get_plugin_registry()
-
-        class TestPlugin(Plugin):
-            def __init__(self, config=None):
-                super().__init__(config=config)
-                self.test_value = config.get("test_value", "default") if config else "default"
-
-        registry.register("test_plugin", TestPlugin, {"test_value": "custom"})
-
-        plugin = registry.create_plugin("test_plugin")
-        assert isinstance(plugin, TestPlugin)
-        assert plugin.test_value == "custom"
-
-    def test_plugin_registry_create_with_config(self):
-        """Test plugin creation with custom config."""
-        registry = get_plugin_registry()
-
-        class TestPlugin(Plugin):
-            def __init__(self, config=None):
-                super().__init__(config=config)
-                self.test_value = config.get("test_value", "default") if config else "default"
-
-        registry.register("test_plugin", TestPlugin, {"test_value": "default"})
-
-        plugin = registry.create_plugin("test_plugin", {"test_value": "override"})
-        assert plugin is not None
-        assert plugin.test_value == "override"
-
-    def test_plugin_registry_invalid_class(self):
-        """Test plugin registration with invalid class."""
-        registry = get_plugin_registry()
-
-        class InvalidPlugin:
-            pass
-
-        with pytest.raises(ValueError, match="Plugin class must inherit from Plugin"):
-            registry.register("invalid_plugin", InvalidPlugin)
-
-    def test_plugin_registry_unregister(self):
-        """Test plugin unregistration."""
-        registry = get_plugin_registry()
-
-        class TestPlugin(Plugin):
-            pass
-
-        registry.register("test_plugin", TestPlugin)
-        assert "test_plugin" in registry.list_plugins()
-
-        registry.unregister("test_plugin")
-        assert "test_plugin" not in registry.list_plugins()
-
-
-if __name__ == "__main__":
-    pytest.main([__file__])
+        # Check that examples are present
+        assert "bz train" in help_text
+        assert "bz train --epochs 10" in help_text
+        assert "bz train --config my_config.json" in help_text
+        assert "bz validate" in help_text
+        assert "bz init" in help_text
+        assert "bz list-plugins" in help_text
+        assert "bz list-metrics" in help_text

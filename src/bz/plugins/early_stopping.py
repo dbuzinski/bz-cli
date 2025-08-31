@@ -49,6 +49,8 @@ class EarlyStoppingPlugin(Plugin):
     the monitored metric stops improving according to the configured strategy.
     """
 
+    name = "early_stopping"  # Plugin name for discovery
+
     def __init__(self, config: Optional[EarlyStoppingConfig] = None):
         """Initialize the early stopping plugin."""
         super().__init__()
@@ -251,3 +253,32 @@ class EarlyStoppingPlugin(Plugin):
             "patience_counter": self.patience_counter,
             "plateau_counter": self.plateau_counter,
         }
+
+    @staticmethod
+    def load_config(config_data: dict) -> Dict[str, Any]:
+        """Load configuration from dict data."""
+        return {
+            "enabled": config_data.get("enabled", True),
+            "patience": config_data.get("patience", 10),
+            "min_delta": config_data.get("min_delta", 0.001),
+            "monitor": config_data.get("monitor", "validation_loss"),
+            "mode": config_data.get("mode", "min"),
+            "strategy": config_data.get("strategy", "patience"),
+            "restore_best_weights": config_data.get("restore_best_weights", True),
+            "verbose": config_data.get("verbose", True),
+            "baseline": config_data.get("baseline"),
+            "min_epochs": config_data.get("min_epochs", 0),
+            "plateau_factor": config_data.get("plateau_factor", 0.1),
+            "plateau_patience": config_data.get("plateau_patience", 10),
+            "plateau_threshold": config_data.get("plateau_threshold", 0.0001),
+            "custom_conditions": config_data.get("custom_conditions", {}),
+        }
+
+    @staticmethod
+    def create(config_data: dict, training_config) -> Optional["EarlyStoppingPlugin"]:
+        """Create plugin instance from config data."""
+        config = EarlyStoppingPlugin.load_config(config_data)
+        if not config.get("enabled", True):
+            return None
+        early_stopping_config = EarlyStoppingConfig(**config)
+        return EarlyStoppingPlugin(early_stopping_config)

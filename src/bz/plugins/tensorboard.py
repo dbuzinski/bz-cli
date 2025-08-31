@@ -3,14 +3,16 @@ TensorBoard plugin for bz CLI.
 Provides TensorBoard integration for training visualization.
 """
 
-from typing import Optional
+from typing import Optional, Dict, Any
 from torch.utils.tensorboard import SummaryWriter
 
 from .plugin import Plugin, PluginContext
 
 
 class TensorBoardPlugin(Plugin):
-    """Plugin for TensorBoard integration during training."""
+    """Plugin for TensorBoard logging."""
+
+    name = "tensorboard"  # Plugin name for discovery
 
     def __init__(self, training_loader_len: int, log_dir: str, **kwargs):
         """
@@ -106,3 +108,16 @@ class TensorBoardPlugin(Plugin):
         """
         training_loader_len = len(spec.training_loader)
         return TensorBoardPlugin(training_loader_len, log_dir)
+
+    @staticmethod
+    def load_config(config_data: dict) -> Dict[str, Any]:
+        """Load configuration from dict data."""
+        return {"log_dir": config_data.get("log_dir", "runs/experiment"), "enabled": config_data.get("enabled", True)}
+
+    @staticmethod
+    def create(config_data: dict, training_config) -> Optional["TensorBoardPlugin"]:
+        """Create plugin instance from config data."""
+        config = TensorBoardPlugin.load_config(config_data)
+        if not config.get("enabled", True):
+            return None
+        return TensorBoardPlugin.init(training_config, config["log_dir"])

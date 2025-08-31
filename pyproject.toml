@@ -13,6 +13,7 @@ dependencies = [
     "standard-imghdr>=3.13.0",
     "tensorboard>=2.19.0",
     "torch>=2.7.0",
+    "torchvision>=0.22.0",
     "tqdm>=4.67.1",
     "typing-extensions>=4.0.0",
 ]
@@ -28,6 +29,14 @@ dev = [
 
 [project.scripts]
 bz = "bz.cli:main"
+
+[project.entry-points."bz.plugins"]
+console_out = "bz.plugins.console_out:ConsoleOutPlugin"
+tensorboard = "bz.plugins.tensorboard:TensorBoardPlugin"
+wandb = "bz.plugins.wandb:WandBPlugin"
+profiler = "bz.plugins.profiler:ProfilerPlugin"
+optuna = "bz.plugins.optuna:OptunaPlugin"
+early_stopping = "bz.plugins.early_stopping:EarlyStoppingPlugin"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bz"]

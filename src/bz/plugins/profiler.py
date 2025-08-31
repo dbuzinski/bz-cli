@@ -6,7 +6,7 @@ Provides detailed performance monitoring and profiling during training.
 import time
 import psutil
 import torch
-from typing import Optional
+from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from bz.plugins import Plugin, PluginContext
 
@@ -29,6 +29,8 @@ class PerformanceMetrics:
 
 class ProfilerPlugin(Plugin):
     """Plugin for performance profiling and monitoring."""
+
+    name = "profiler"  # Plugin name for discovery
 
     def __init__(self, log_interval: int = 10, enable_gpu_monitoring: bool = True, **kwargs):
         """
@@ -210,3 +212,22 @@ class ProfilerPlugin(Plugin):
             Configured ProfilerPlugin instance
         """
         return ProfilerPlugin(log_interval=log_interval, enable_gpu_monitoring=enable_gpu_monitoring)
+
+    @staticmethod
+    def load_config(config_data: dict) -> Dict[str, Any]:
+        """Load configuration from dict data."""
+        return {
+            "log_interval": config_data.get("log_interval", 10),
+            "enable_gpu_monitoring": config_data.get("enable_gpu_monitoring", True),
+            "enabled": config_data.get("enabled", True),
+        }
+
+    @staticmethod
+    def create(config_data: dict, training_config) -> Optional["ProfilerPlugin"]:
+        """Create plugin instance from config data."""
+        config = ProfilerPlugin.load_config(config_data)
+        if not config.get("enabled", True):
+            return None
+        return ProfilerPlugin(
+            log_interval=config["log_interval"], enable_gpu_monitoring=config["enable_gpu_monitoring"]
+        )

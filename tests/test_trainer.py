@@ -293,18 +293,23 @@ class TestTrainer:
             mock_checkpoint_manager_class.return_value = mock_checkpoint_manager
             mock_checkpoint_manager.load_latest_checkpoint.return_value = None
 
-            trainer.train(
+            # Create a TrainingConfiguration object
+            from bz import TrainingConfiguration
+
+            config = TrainingConfiguration(
+                epochs=2,
                 model=model,
                 optimizer=optimizer,
                 loss_fn=loss_fn,
                 training_loader=training_loader,
                 validation_loader=validation_loader,
-                epochs=2,
                 compile=False,
                 checkpoint_interval=0,
                 metrics=[],
                 hyperparameters={},
             )
+
+            trainer.train(config)
 
             # Verify training stages were called
             mock_run_stage.assert_any_call("start_training_session", mock_run_stage.call_args[0][1])

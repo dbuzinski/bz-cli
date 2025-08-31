@@ -12,6 +12,8 @@ from bz.plugins import Plugin, PluginContext
 class WandBPlugin(Plugin):
     """Plugin for Weights & Biases integration during training."""
 
+    name = "wandb"  # Plugin name for discovery
+
     def __init__(
         self, project_name: str, entity: Optional[str] = None, config: Optional[Dict[str, Any]] = None, **kwargs
     ):
@@ -217,3 +219,20 @@ class WandBPlugin(Plugin):
             Configured WandBPlugin instance
         """
         return WandBPlugin(project_name=project_name, entity=entity)
+
+    @staticmethod
+    def load_config(config_data: dict) -> Dict[str, Any]:
+        """Load configuration from dict data."""
+        return {
+            "project_name": config_data.get("project_name", "bz-experiments"),
+            "entity": config_data.get("entity"),
+            "enabled": config_data.get("enabled", True),
+        }
+
+    @staticmethod
+    def create(config_data: dict, training_config) -> Optional["WandBPlugin"]:
+        """Create plugin instance from config data."""
+        config = WandBPlugin.load_config(config_data)
+        if not config.get("enabled", True):
+            return None
+        return WandBPlugin(project_name=config["project_name"], entity=config["entity"])

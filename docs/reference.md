@@ -75,62 +75,6 @@ class PluginContext:
 | `extra` | Dict[str, Any] | Additional context data |
 | `should_stop_training` | bool | Flag to stop training (set by plugins) |
 
-### `bz.config` - Configuration Management
-
-Configuration management module providing type-safe configuration handling.
-
-#### `ConfigManager`
-
-Manages configuration loading, validation, and access.
-
-```python
-@dataclass
-class ConfigManager:
-    config_path: Optional[str] = None
-    _config: Optional[BzConfig] = None
-```
-
-**Methods:**
-
-- `load() -> BzConfig`: Load and validate configuration
-- `get_training_config() -> TrainingConfig`: Get training configuration
-- `get_plugin_config(plugin_name: str) -> Optional[PluginConfig]`: Get plugin configuration
-- `get_metrics_config() -> MetricsConfig`: Get metrics configuration
-- `get_hyperparameters() -> Dict[str, Any]`: Get hyperparameters
-- `is_plugin_enabled(plugin_name: str) -> bool`: Check if plugin is enabled
-
-#### Configuration Types
-
-```python
-class TrainingConfig(TypedDict, total=False):
-    epochs: int
-    batch_size: int
-    learning_rate: float
-    device: str
-    compile: bool
-    checkpoint_interval: int
-
-class PluginConfig(TypedDict, total=False):
-    enabled: bool
-    config: Dict[str, Any]
-
-class MetricsConfig(TypedDict, total=False):
-    metrics: List[str]
-    custom_metrics: Dict[str, Dict[str, Any]]
-
-class BzConfig(TypedDict, total=False):
-    training: TrainingConfig
-    plugins: Dict[str, PluginConfig]
-    metrics: MetricsConfig
-    hyperparameters: Dict[str, Any]
-    optuna: Optional[Dict[str, Any]]
-```
-
-#### Functions
-
-- `load_config(path: Optional[str] = None) -> Dict[str, Any]`: Load configuration (backward compatibility)
-- `get_config_manager() -> ConfigManager`: Get global configuration manager instance
-
 ### `bz.plugins` - Plugin System
 
 Plugin system for extending training functionality.
@@ -454,36 +398,19 @@ class TrainingSpecification:
 
 ```python
 from typing import Dict, List, Optional, Any, Union
-from torch import Tensor
-```
-
-### Configuration Types
-
-```python
 from typing_extensions import TypedDict
-
-class TrainingConfig(TypedDict, total=False):
-    epochs: int
-    batch_size: int
-    learning_rate: float
-    device: str
-    compile: bool
-    checkpoint_interval: int
-
-class PluginConfig(TypedDict, total=False):
-    enabled: bool
-    config: Dict[str, Any]
-
-class MetricsConfig(TypedDict, total=False):
-    metrics: List[str]
-    custom_metrics: Dict[str, Dict[str, Any]]
+from torch import Tensor
 
 class BzConfig(TypedDict, total=False):
-    training: TrainingConfig
-    plugins: Dict[str, PluginConfig]
-    metrics: MetricsConfig
+    loss_fn: Optional[Any]
+    optimizer: Optional[Any]
+    model: Optional[Any]
+    device: Optional[str]
+    epochs: int
+    checkpoint_interval: int
     hyperparameters: Dict[str, Any]
-    optuna: Optional[Dict[str, Any]]
+    metrics: Dict[str, Any]
+    plugins: Dict[str, Any]
 ```
 
 ## Metrics System
