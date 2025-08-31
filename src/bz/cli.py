@@ -7,12 +7,11 @@ import argparse
 import importlib.util
 import os
 import sys
-from dataclasses import dataclass
 
 from bz import Trainer
-from bz.config import get_config_manager, ConfigManager
-from bz.plugins import load_plugins_from_config, get_plugin_registry
-from bz.metrics import get_metric, list_available_metrics
+from bz.config import get_config
+from bz.plugins import get_plugin_registry
+from bz.metrics import list_available_metrics
 from bz.health import run_health_check as run_health_check_func, print_health_report
 
 
@@ -100,23 +99,11 @@ Examples:
 
 def run_training(args):
     """Run the training process."""
-    # Load configuration
-    config_manager = get_config_manager()
+    # Set CLI config path if specified
     if args.config:
-        config_manager = ConfigManager(config_path=args.config)
-
-    training_config = config_manager.get_training_config()
-
-    # Override config with command line arguments
-    if args.epochs:
-        training_config["epochs"] = args.epochs
-    if args.checkpoint_interval is not None:
-        training_config["checkpoint_interval"] = args.checkpoint_interval
-    if args.no_compile:
-        training_config["compile"] = False
-    if args.device:
-        training_config["device"] = args.device
-
+        from bz.config import set_cli_config_path
+        set_cli_config_path(args.config)
+    
     # Import train.py as module
     train_path = "train.py"
     if not os.path.exists(train_path):
@@ -140,56 +127,41 @@ def run_training(args):
     finally:
         sys.path.pop(0)
 
-    # Load training specification
+    # Get the config from the train.py module
     try:
-        training_spec = load_training_spec(module)
-    except Exception as e:
-        print(f"Error loading training specification: {e}")
+        config = module.config
+    except AttributeError:
+        print("Error: train.py must define a 'config' variable")
+        print("Make sure you call 'config = get_config()' and set up your model, loss_fn, etc.")
         sys.exit(1)
+
+    # Instantiate plugins now that data loaders are set up
+    from bz.config import instantiate_plugins
+
+    instantiate_plugins(config)
+
+    # Override config with command line arguments
+    if args.epochs:
+        config.epochs = args.epochs
 
     # Create trainer and load plugins
     trainer = Trainer()
 
-    # Load plugins based on configuration
-    plugin_configs = config_manager.load().get("plugins", {})
-
-    # Add Optuna plugin if optimization is requested
-    if args.optimize:
-        from .plugins.optuna import OptunaConfig
-
-        optuna_config = OptunaConfig(study_name=args.study_name, n_trials=args.n_trials, direction="minimize")
-        plugin_configs["optuna"] = {"enabled": True, "config": optuna_config.__dict__}
-        print(f"Optuna optimization enabled: {args.n_trials} trials, study={args.study_name}")
-
-    plugins = load_plugins_from_config(plugin_configs, training_spec)
-    trainer.plugins = plugins
-
-    # Load metrics
-    metrics = load_metrics_from_config(config_manager, module)
+    # Set up trainer with the objects from config
+    trainer.plugins = config.plugins
 
     # Start training
     print("Starting training with configuration:")
-    print(f"  Epochs: {training_config['epochs']}")
-    print(f"  Batch size: {training_config['batch_size']}")
-    print(f"  Learning rate: {training_config['learning_rate']}")
-    print(f"  Device: {training_config['device']}")
-    print(f"  Environment: {config_manager.get_environment()}")
-    print(f"  Plugins: {[p.name for p in plugins]}")
-    print(f"  Metrics: {[m.name for m in metrics]}")
+    print(f"  Epochs: {config.epochs}")
+    print(f"  Device: {config.device}")
+    print(f"  Model: {type(config.model).__name__}")
+    print(f"  Loss function: {type(config.loss_fn).__name__}")
+    print(f"  Optimizer: {type(config.optimizer).__name__}")
+    print(f"  Plugins: {[p.name for p in config.plugins]}")
+    print(f"  Metrics: {[m.name for m in config.metrics]}")
     print()
 
-    trainer.train(
-        training_spec.model,
-        training_spec.optimizer,
-        training_spec.loss_fn,
-        training_spec.training_loader,
-        validation_loader=training_spec.validation_loader,
-        epochs=training_config["epochs"],
-        compile=training_config["compile"],
-        checkpoint_interval=training_config["checkpoint_interval"],
-        metrics=metrics,
-        hyperparameters=config_manager.get_hyperparameters(),
-    )
+    trainer.train(config)
 
 
 def run_validation(args):
@@ -205,7 +177,7 @@ def run_init(args):
     # Create basic project structure
     files_to_create = {
         "train.py": get_train_template(),
-        "bz_config.json": get_config_template(),
+        "bzconfig.json": get_config_template(),
         "model.py": get_model_template(),
         "README.md": get_readme_template(),
     }
@@ -239,13 +211,24 @@ def run_list_plugins(args):
     # Show configured plugins if config is provided
     if args.config:
         try:
-            config_manager = ConfigManager(config_path=args.config)
-            plugin_configs = config_manager.load().get("plugins", {})
+            # Temporarily set environment variable to load the specified config
+            original_env = os.environ.get("BZ_CONFIG")
+            os.environ["BZ_CONFIG"] = args.config
+            config = get_config()
+            if original_env:
+                os.environ["BZ_CONFIG"] = original_env
+            elif "BZ_CONFIG" in os.environ:
+                del os.environ["BZ_CONFIG"]
 
             print("\nConfigured plugins:")
-            for plugin_name, config in plugin_configs.items():
-                status = "enabled" if config.get("enabled", True) else "disabled"
-                print(f"  - {plugin_name}: {status}")
+            for plugin in config.plugins:
+                if isinstance(plugin, str):
+                    print(f"  - {plugin}: enabled")
+                elif isinstance(plugin, dict):
+                    plugin_name = list(plugin.keys())[0]
+                    config_data = plugin[plugin_name]
+                    status = "enabled" if config_data.get("enabled", True) else "disabled"
+                    print(f"  - {plugin_name}: {status}")
 
         except Exception as e:
             print(f"Error loading config: {e}")
@@ -270,74 +253,6 @@ def run_health_check(args):
         print_health_report()
 
 
-def load_metrics_from_config(config_manager: ConfigManager, module) -> list:
-    """Load metrics based on configuration."""
-    metrics = []
-    metrics_config = config_manager.get_metrics_config()
-
-    # Load built-in metrics
-    for metric_name in metrics_config.get("metrics", []):
-        try:
-            metric = get_metric(metric_name)
-            metrics.append(metric)
-        except ValueError as e:
-            print(f"Warning: {e}")
-
-    # Load custom metrics from module
-    try:
-        module_metrics = getattr(module, "metrics", [])
-        metrics.extend(module_metrics)
-    except AttributeError:
-        pass
-
-    return metrics
-
-
-@dataclass
-class TrainingSpecification:
-    def __init__(
-        self,
-        model,
-        loss_fn,
-        optimizer,
-        training_loader,
-        validation_loader,
-        hyperparameters,
-    ):
-        self.model = model
-        self.loss_fn = loss_fn
-        self.optimizer = optimizer
-        self.training_loader = training_loader
-        self.validation_loader = validation_loader
-        self.hyperparameters = hyperparameters
-
-
-def load_training_spec(module):
-    model = _load_required(module, "model")
-    loss_fn = _load_required(module, "loss_fn")
-    optimizer = _load_required(module, "optimizer")
-    training_loader = _load_required(module, "training_loader")
-    validation_loader = _load_optional(module, "validation_loader", None)
-    hyperparameters = _load_optional(module, "hyperparameters", {})
-    return TrainingSpecification(model, loss_fn, optimizer, training_loader, validation_loader, hyperparameters)
-
-
-def _load_required(module, attr):
-    try:
-        val = getattr(module, attr)
-        return val
-    except AttributeError:
-        raise Exception(f"{attr} must be specified in train.py")
-
-
-def _load_optional(module, attr, default_val):
-    try:
-        val = getattr(module, attr)
-        return val
-    except AttributeError:
-        return default_val
-
-
 # Template functions for project initialization
 def get_train_template() -> str:
     return """import torch
@@ -346,7 +261,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from model import MyModel
 from bz.metrics import Accuracy
-from bz.config import get_config_manager
+from bz.config import get_config
 
 # Set seed for reproducibility
 torch.manual_seed(42)
@@ -354,9 +269,7 @@ g = torch.Generator()
 g.manual_seed(2048)
 
 # Load configuration
-config_manager = get_config_manager()
-hyperparameters = config_manager.get_hyperparameters()
-training_config = config_manager.get_training_config()
+config = get_config()
 
 # Define dataset and transforms
 transform = transforms.Compose([
@@ -375,23 +288,32 @@ validation_set = torchvision.datasets.FashionMNIST(
 # Create data loaders
 training_loader = DataLoader(
     training_set, 
-    batch_size=training_config["batch_size"], 
+    batch_size=config.hyperparameters.get("batch_size", 64), 
     shuffle=True, 
     generator=g
 )
 validation_loader = DataLoader(
     validation_set, 
-    batch_size=training_config["batch_size"], 
+    batch_size=config.hyperparameters.get("batch_size", 64), 
     shuffle=False
 )
 
 # Define model, loss function, and optimizer
-model = MyModel()
+model = MyModel(num_layers=config.hyperparameters.get("num_layers", 3))
 loss_fn = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(
     model.parameters(), 
-    lr=training_config["learning_rate"]
+    lr=config.hyperparameters.get("lr", 0.001)
 )
+
+# Set the Python objects in the config
+config.model = model
+config.loss_fn = loss_fn
+config.optimizer = optimizer
+config.training_loader = training_loader
+config.validation_loader = validation_loader
+config.training_set = training_set
+config.validation_set = validation_set
 
 # Define metrics
 metrics = [Accuracy()]
@@ -400,38 +322,13 @@ metrics = [Accuracy()]
 
 def get_config_template() -> str:
     return """{
-  "training": {
-    "epochs": 10,
-    "batch_size": 64,
-    "learning_rate": 0.001,
-    "device": "auto",
-    "compile": true,
-    "checkpoint_interval": 5,
-    "early_stopping_patience": null,
-    "early_stopping_min_delta": 0.001
-  },
-  "plugins": {
-    "console_out": {
-      "enabled": true,
-      "config": {},
-      "dependencies": []
-    },
-    "tensorboard": {
-      "enabled": false,
-      "config": {
-        "log_dir": "runs/experiment"
-      },
-      "dependencies": []
-    }
-  },
-  "metrics": {
-    "metrics": ["accuracy"]
-  },
+  "epochs": 10,
   "hyperparameters": {
     "lr": 0.001,
     "batch_size": 64
   },
-  "environment": "development"
+  "metrics": ["accuracy"],
+  "plugins": ["console_out"]
 }
 """
 
@@ -486,13 +383,4 @@ This project uses the bz CLI for training machine learning models.
 ## Configuration
 
 Edit `bz_config.json` to customize training parameters, enable/disable plugins, and configure metrics.
-
-## Environment Configuration
-
-You can use different configurations for different environments:
-- Development: `bz_config.development.json`
-- Staging: `bz_config.staging.json`
-- Production: `bz_config.production.json`
-
-Set the `BZ_ENV` environment variable to specify the environment.
 """

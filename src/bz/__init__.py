@@ -14,6 +14,7 @@ import torch
 
 from .metrics import Metric
 from .plugins import Plugin, PluginContext
+from .config import TrainingConfiguration
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -219,41 +220,26 @@ class Trainer:
         """Add a plugin to the trainer."""
         self.plugins.append(plugin)
 
-    def train(
-        self,
-        model,
-        optimizer,
-        loss_fn,
-        training_loader,
-        validation_loader=None,
-        device=default_device,
-        epochs=1,
-        compile=True,
-        checkpoint_interval=0,
-        metrics: Optional[List[Metric]] = None,
-        hyperparameters: Optional[Dict[str, Any]] = None,
-    ):
+    def train(self, config):
         """
         Train a model with the specified configuration.
 
         Args:
-            model: PyTorch model to train
-            optimizer: PyTorch optimizer
-            loss_fn: Loss function
-            training_loader: Training data loader
-            validation_loader: Validation data loader (optional)
-            device: Device to train on
-            epochs: Number of training epochs
-            compile: Whether to compile the model
-            checkpoint_interval: How often to save checkpoints
-            metrics: List of metrics to track
-            hyperparameters: Dictionary of hyperparameters
+            config: TrainingConfiguration object containing all training parameters
 
         """
-        if metrics is None:
-            metrics = []
-        if hyperparameters is None:
-            hyperparameters = {}
+        # Extract values from config
+        model = config.model
+        optimizer = config.optimizer
+        loss_fn = config.loss_fn
+        training_loader = config.training_loader
+        validation_loader = config.validation_loader
+        epochs = config.epochs
+        device = config.device if config.device != "auto" else default_device
+        compile = config.compile
+        checkpoint_interval = config.checkpoint_interval
+        hyperparameters = config.hyperparameters
+        metrics = config.metrics
 
         # Initialize context
         context = PluginContext()
@@ -375,6 +361,7 @@ def load_config(path: Optional[str] = None) -> Dict[str, Any]:
 __all__ = [
     "Trainer",
     "TrainingLoop",
+    "TrainingConfiguration",
     "CheckpointManager",
     "load_config",
     "default_device",

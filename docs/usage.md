@@ -68,45 +68,27 @@ Create a `bz_config.json` file in your project directory:
 
 ```json
 {
-  "training": {
-    "epochs": 10,
-    "batch_size": 64,
-    "learning_rate": 0.001,
-    "device": "auto",
-    "compile": true,
-    "checkpoint_interval": 5,
-
-  },
-  "plugins": {
-    "console_out": {
-      "enabled": true,
-      "config": {
-        "update_interval": 1,
-        "show_progress": true
-      }
-    },
-    "tensorboard": {
-      "enabled": true,
-      "config": {
-        "log_dir": "runs/experiment",
-        "flush_interval": 10
-      }
-    }
-  },
-  "metrics": {
-    "metrics": ["accuracy", "precision", "recall"],
-    "custom_metrics": {
-      "f1_score": {
-        "type": "f1",
-        "average": "macro"
-      }
-    }
-  },
+  "epochs": 10,
+  "device": "auto",
+  "compile": true,
+  "checkpoint_interval": 5,
   "hyperparameters": {
     "lr": 0.001,
     "batch_size": 64,
-    "optimizer": "adam",
     "weight_decay": 0.0001
+  },
+  "plugins": {
+    "console_out": {
+      "update_interval": 1,
+      "show_progress": true
+    },
+    "tensorboard": {
+      "log_dir": "runs/experiment",
+      "flush_interval": 10
+    }
+  },
+  "metrics": {
+    "metrics": ["accuracy", "precision", "recall"]
   }
 }
 ```
@@ -166,12 +148,6 @@ The CLI looks for configuration files in this order:
 1. File specified by `--config` argument
 2. File specified by `BZ_CONFIG` environment variable
 3. `bz_config.json` in current directory
-4. `config.json` in current directory
-5. Default configuration
-
-### Environment Variables
-
-- `BZ_CONFIG`: Path to configuration file
 
 ## Plugin System
 
@@ -187,11 +163,8 @@ Provides progress bars and training summaries.
 ```json
 {
   "console_out": {
-    "enabled": true,
-    "config": {
-      "update_interval": 1,
-      "show_progress": true
-    }
+    "update_interval": 1,
+    "show_progress": true
   }
 }
 ```
@@ -204,11 +177,8 @@ Logs training metrics to TensorBoard.
 ```json
 {
   "tensorboard": {
-    "enabled": true,
-    "config": {
-      "log_dir": "runs/experiment",
-      "flush_interval": 10
-    }
+    "log_dir": "runs/experiment",
+    "flush_interval": 10
   }
 }
 ```
@@ -221,17 +191,14 @@ Automatically stops training when the monitored metric stops improving.
 ```json
 {
   "early_stopping": {
-    "enabled": true,
-    "config": {
-      "patience": 10,
-      "min_delta": 0.001,
-      "monitor": "validation_loss",
-      "mode": "min",
-      "strategy": "patience",
-      "restore_best_weights": true,
-      "verbose": true,
-      "min_epochs": 0
-    }
+    "patience": 10,
+    "min_delta": 0.001,
+    "monitor": "validation_loss",
+    "mode": "min",
+    "strategy": "patience",
+    "restore_best_weights": true,
+    "verbose": true,
+    "min_epochs": 0
   }
 }
 ```
@@ -313,11 +280,10 @@ Enable plugins in your configuration file:
 ```json
 {
   "plugins": {
-    "console_out": {"enabled": true},
-    "tensorboard": {"enabled": true},
+    "console_out": {},
+    "tensorboard": {},
     "my_custom_plugin": {
-      "enabled": true,
-      "config": {"option": "value"}
+      "option": "value"
     }
   }
 }
@@ -450,15 +416,7 @@ Configure metrics in your configuration file:
 
 ```json
 {
-  "metrics": {
-    "metrics": ["accuracy", "precision", "recall"],
-    "custom_metrics": {
-      "custom_accuracy": {
-        "type": "CustomAccuracy",
-        "threshold": 0.7
-      }
-    }
-  }
+  "metrics": ["accuracy", "precision", "recall"]
 }
 ```
 
@@ -479,73 +437,6 @@ Your `train.py` file should define the following variables:
 - `metrics`: List of metrics to track
 - `plugins`: List of custom plugins
 - `hyperparameters`: Dictionary of hyperparameters
-
-### Example Training Script
-
-```python
-import torch
-import torchvision
-import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
-from model import MyModel
-from bz.metrics import Accuracy, Precision
-from bz.config import get_config_manager
-
-# Load configuration
-config_manager = get_config_manager()
-hyperparameters = config_manager.get_hyperparameters()
-training_config = config_manager.get_training_config()
-
-# Set seed for reproducibility
-torch.manual_seed(42)
-g = torch.Generator()
-g.manual_seed(2048)
-
-# Define dataset and transforms
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
-])
-
-# Load datasets
-training_set = torchvision.datasets.FashionMNIST(
-    './data', train=True, transform=transform, download=True
-)
-validation_set = torchvision.datasets.FashionMNIST(
-    './data', train=False, transform=transform, download=True
-)
-
-# Create data loaders
-training_loader = DataLoader(
-    training_set, 
-    batch_size=training_config["batch_size"], 
-    shuffle=True, 
-    generator=g
-)
-validation_loader = DataLoader(
-    validation_set, 
-    batch_size=training_config["batch_size"], 
-    shuffle=False
-)
-
-# Define model, loss function, and optimizer
-model = MyModel()
-loss_fn = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(
-    model.parameters(), 
-    lr=training_config["learning_rate"]
-)
-
-# Define metrics
-metrics = [Accuracy(), Precision()]
-
-# Optional: Define custom hyperparameters
-hyperparameters = {
-    "lr": training_config["learning_rate"],
-    "batch_size": training_config["batch_size"],
-    "optimizer": "adam"
-}
-```
 
 ## Error Handling
 

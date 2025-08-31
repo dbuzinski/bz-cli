@@ -6,7 +6,7 @@ import pytest
 import tempfile
 import os
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from bz.cli import create_parser, load_training_spec, TrainingSpecification, _load_required, _load_optional
 from bz.config import ConfigManager
 from bz.plugins import get_plugin_registry, Plugin
@@ -146,15 +146,13 @@ class TestConfigManager:
             with open(env_config_path, "w") as f:
                 json.dump(test_config, f)
 
-            # Set environment
-            with patch.dict(os.environ, {"BZ_ENV": "test"}):
-                config_manager = ConfigManager()
-                config_manager.config_path = env_config_path
-                config = config_manager.load()
+            config_manager = ConfigManager()
+            config_manager.config_path = env_config_path
+            config = config_manager.load()
 
-                assert config["training"]["epochs"] == 50
-                assert config["training"]["batch_size"] == 256
-                assert config["environment"] == "test"
+            assert config["training"]["epochs"] == 50
+            assert config["training"]["batch_size"] == 256
+            assert config["environment"] == "test"
 
     def test_config_manager_validation(self):
         """Test ConfigManager validation."""

@@ -9,7 +9,6 @@ A powerful, extensible Python package for training machine learning models with 
 - **⚙️ Unified Configuration**: Type-safe configuration with validation and environment support
 - **🛡️ Advanced Error Handling**: Graceful plugin failures and recovery
 - **💾 Checkpoint Management**: Automatic checkpointing and resuming
-- **🚀 Early Stopping**: Advanced early stopping with multiple strategies
 - **🔧 Type Safety**: Full MyPy type checking support
 - **📈 Monitoring**: Integration with TensorBoard, WandB, and other tools
 
@@ -127,8 +126,6 @@ metrics = [Accuracy(), Precision(), Recall()]
 ```bash
 # Basic training
 bz train
-
-
 ```
 
 ## 🔌 Built-in Plugins
@@ -187,7 +184,15 @@ The documentation includes:
 Run the comprehensive test suite:
 
 ```bash
-pytest tests/
+uv run pytest
+```
+
+Lint and format code:
+
+```bash
+uv run ruff check src tests
+uv run mypy src tests
+uv run black src tests
 ```
 
 ## 🛠️ Development
@@ -197,18 +202,17 @@ pytest tests/
 ```
 bz-cli/
 ├── src/bz/
-│   ├── __init__.py          # Main trainer and core classes
+│   ├── __init__.py         # Main trainer and core classes
 │   ├── cli.py              # Command-line interface
 │   ├── config.py           # Configuration management
+│   ├── health.py           # System health checks
 │   ├── metrics/            # Modular metrics system
 │   │   ├── metric.py       # Base metric class
 │   │   ├── accuracy.py     # Individual metric files
 │   │   └── ...
 │   └── plugins/            # Plugin system
 │       ├── plugin.py       # Base plugin class
-│       ├── console_out.py  # Console output plugin
-│       ├── tensorboard.py  # TensorBoard plugin
-│       ├── early_stopping.py # Early stopping plugin
+│       ├── console_out.py  # Individual plugin files
 │       └── ...
 ├── tests/                  # Comprehensive test suite
 ├── examples/               # Example projects
@@ -223,12 +227,3 @@ bz-cli/
 4. Add tests for new functionality
 5. Run the test suite
 6. Submit a pull request
-
-
-
-## 🤝 Acknowledgments
-
-- Built on PyTorch for deep learning capabilities
-- Inspired by modern ML training frameworks
-- Community contributions and feedback
-
