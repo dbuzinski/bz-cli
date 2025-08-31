@@ -106,9 +106,6 @@ Start training your model:
 ```bash
 # Basic training
 bz train
-
-# Or enable early stopping via CLI
-bz train --early-stopping-patience 3
 ```
 
 You should see output similar to:

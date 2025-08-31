@@ -45,9 +45,6 @@ bz train
 ```bash
 # Train with custom epochs
 bz train --epochs 10 --config my_config.json
-
-# Train with early stopping
-bz train --early-stopping-patience 5
 ```
 
 ## 📋 Basic Usage
@@ -110,7 +107,6 @@ metrics = [Accuracy()]
 | Command | Description |
 |---------|-------------|
 | `bz train` | Train a model with current configuration |
-| `bz train --early-stopping-patience N` | Train with early stopping |
 | `bz init` | Initialize a new project with templates |
 | `bz validate` | Validate a trained model (coming soon) |
 
