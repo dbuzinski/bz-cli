@@ -67,8 +67,6 @@ Examples:
     train_parser.add_argument("--no-compile", action="store_true", help="Disable model compilation")
     train_parser.add_argument("--config", type=str, help="Path to configuration file")
     train_parser.add_argument("--device", type=str, choices=["auto", "cpu", "cuda"], help="Device to use")
-    train_parser.add_argument("--early-stopping-patience", type=int, help="Early stopping patience")
-    train_parser.add_argument("--early-stopping-min-delta", type=float, help="Early stopping minimum delta")
 
     # Optuna hyperparameter optimization
     train_parser.add_argument("--optimize", action="store_true", help="Enable hyperparameter optimization with Optuna")
@@ -118,10 +116,6 @@ def run_training(args):
         training_config["compile"] = False
     if args.device:
         training_config["device"] = args.device
-    if args.early_stopping_patience is not None:
-        training_config["early_stopping_patience"] = args.early_stopping_patience
-    if args.early_stopping_min_delta is not None:
-        training_config["early_stopping_min_delta"] = args.early_stopping_min_delta
 
     # Import train.py as module
     train_path = "train.py"
@@ -167,18 +161,6 @@ def run_training(args):
         plugin_configs["optuna"] = {"enabled": True, "config": optuna_config.__dict__}
         print(f"Optuna optimization enabled: {args.n_trials} trials, study={args.study_name}")
 
-    # Add early stopping plugin if configured
-    if args.early_stopping_patience:
-        from .plugins.early_stopping import EarlyStoppingConfig
-
-        early_stopping_config = EarlyStoppingConfig(
-            patience=args.early_stopping_patience, min_delta=args.early_stopping_min_delta or 0.001
-        )
-        plugin_configs["early_stopping"] = {"enabled": True, "config": early_stopping_config.__dict__}
-        print(
-            f"Early stopping enabled: patience={args.early_stopping_patience}, min_delta={early_stopping_config.min_delta}"
-        )
-
     plugins = load_plugins_from_config(plugin_configs, training_spec)
     trainer.plugins = plugins
 
@@ -207,8 +189,6 @@ def run_training(args):
         checkpoint_interval=training_config["checkpoint_interval"],
         metrics=metrics,
         hyperparameters=config_manager.get_hyperparameters(),
-        early_stopping_patience=training_config.get("early_stopping_patience"),
-        early_stopping_min_delta=training_config.get("early_stopping_min_delta", 0.001),
     )
 
 

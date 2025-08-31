@@ -6,8 +6,7 @@
     "device": "auto",
     "compile": true,
     "checkpoint_interval": 5,
-    "early_stopping_patience": 3,
-    "early_stopping_min_delta": 0.001
+
   },
   "plugins": {
     "console_out": {

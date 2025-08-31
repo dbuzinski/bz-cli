@@ -39,8 +39,7 @@ class Trainer:
 | `checkpoint_interval` | int | 0 | Checkpoint save interval |
 | `metrics` | List[Metric] | [] | List of metrics to track |
 | `hyperparameters` | Dict[str, Any] | {} | Training hyperparameters |
-| `early_stopping_patience` | Optional[int] | None | Early stopping patience |
-| `early_stopping_min_delta` | float | 0.001 | Minimum improvement for early stopping |
+
 
 #### `PluginContext`
 
@@ -110,8 +109,6 @@ class TrainingConfig(TypedDict, total=False):
     device: str
     compile: bool
     checkpoint_interval: int
-    early_stopping_patience: Optional[int]
-    early_stopping_min_delta: float
 
 class PluginConfig(TypedDict, total=False):
     enabled: bool
@@ -472,8 +469,6 @@ class TrainingConfig(TypedDict, total=False):
     device: str
     compile: bool
     checkpoint_interval: int
-    early_stopping_patience: Optional[int]
-    early_stopping_min_delta: float
 
 class PluginConfig(TypedDict, total=False):
     enabled: bool

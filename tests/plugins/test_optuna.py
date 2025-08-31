@@ -167,10 +167,11 @@ class TestOptunaPlugin:
         plugin.trial_number = 3
         assert plugin._should_continue_optimization() is False
 
-        # Should stop after early stopping
+        # Early stopping is now handled by EarlyStoppingPlugin
+        # Optuna plugin focuses on trial management only
         plugin.trial_number = 1
         plugin.no_improvement_count = 5
-        assert plugin._should_continue_optimization() is False
+        assert plugin._should_continue_optimization() is True
 
     def test_save_best_params(self, mock_optuna, plugin_config, context):
         """Test best parameters saving."""

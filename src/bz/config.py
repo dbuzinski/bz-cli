@@ -30,8 +30,6 @@ class TrainingConfig(TypedDict, total=False):
     device: str
     compile: bool
     checkpoint_interval: int
-    early_stopping_patience: Optional[int]
-    early_stopping_min_delta: float
 
 
 class MetricsConfig(TypedDict, total=False):
@@ -135,8 +133,6 @@ class ConfigManager:
                 "device": "auto",
                 "compile": True,
                 "checkpoint_interval": 0,
-                "early_stopping_patience": None,
-                "early_stopping_min_delta": 0.001,
             },
             "plugins": {
                 "console_out": {"enabled": True, "config": {}, "dependencies": []},

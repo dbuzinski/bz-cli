@@ -4,28 +4,14 @@ A powerful, extensible Python package for training machine learning models with 
 
 ## 🚀 Features
 
-### Core Features
-- **Extensible Plugin System**: Hook into any part of the training lifecycle
-- **Comprehensive Metrics System**: Built-in and custom metrics with easy registration
-- **Robust Configuration Management**: Environment-based configs with validation
-- **Advanced Error Handling**: Graceful plugin failures and recovery
-- **Checkpoint Management**: Automatic checkpointing and resuming
-- **Early Stopping**: Configurable early stopping with patience and minimum delta
-
-### Plugin System
-- **Plugin Registry**: Dynamic plugin discovery and loading
-- **Plugin Dependencies**: Manage dependencies between plugins
-- **Plugin Configuration**: JSON/YAML configuration for plugins
-- **Built-in Plugins**:
-  - **Console Output**: Formatted training progress with tqdm
-  - **TensorBoard**: Integration with TensorBoard for visualization
-  - **Weights & Biases**: Experiment tracking and model versioning
-
-### Configuration Management
-- **Environment Support**: Different configs for dev/staging/prod
-- **Schema Validation**: Type-safe configuration with validation
-- **Deep Merging**: Intelligent config merging with defaults
-- **Plugin Dependencies**: Automatic dependency resolution
+- **🔄 Extensible Plugin System**: Hook into any part of the training lifecycle
+- **📊 Modular Metrics System**: Classification and regression metrics with easy registration
+- **⚙️ Unified Configuration**: Type-safe configuration with validation and environment support
+- **🛡️ Advanced Error Handling**: Graceful plugin failures and recovery
+- **💾 Checkpoint Management**: Automatic checkpointing and resuming
+- **🚀 Early Stopping**: Advanced early stopping with multiple strategies
+- **🔧 Type Safety**: Full MyPy type checking support
+- **📈 Monitoring**: Integration with TensorBoard, WandB, and other tools
 
 ## 📦 Installation
 
@@ -59,40 +45,25 @@ Edit `bz_config.json`:
     "learning_rate": 0.001,
     "device": "auto",
     "compile": true,
-    "checkpoint_interval": 5,
-    "early_stopping_patience": 3,
-    "early_stopping_min_delta": 0.001
+    "checkpoint_interval": 5
   },
   "plugins": {
-    "console_out": {
-      "enabled": true,
-      "config": {},
-      "dependencies": []
-    },
+    "console_out": {"enabled": true},
     "tensorboard": {
       "enabled": true,
-      "config": {
-        "log_dir": "runs/experiment"
-      },
-      "dependencies": []
+      "config": {"log_dir": "runs/experiment"}
     },
-    "wandb": {
-      "enabled": false,
+    "early_stopping": {
+      "enabled": true,
       "config": {
-        "project_name": "my-experiment",
-        "entity": "my-username"
-      },
-      "dependencies": []
+        "patience": 3,
+        "min_delta": 0.001
+      }
     }
   },
   "metrics": {
     "metrics": ["accuracy", "precision", "recall"]
-  },
-  "hyperparameters": {
-    "lr": 0.001,
-    "batch_size": 64
-  },
-  "environment": "development"
+  }
 }
 ```
 
@@ -111,7 +82,6 @@ from bz.config import get_config_manager
 
 # Load configuration
 config_manager = get_config_manager()
-hyperparameters = config_manager.get_hyperparameters()
 training_config = config_manager.get_training_config()
 
 # Define dataset and transforms
@@ -155,85 +125,34 @@ metrics = [Accuracy(), Precision(), Recall()]
 ### 4. Start Training
 
 ```bash
+# Basic training
 bz train
+
+
 ```
 
-## 🔧 Advanced Usage
+## 🔌 Built-in Plugins
 
-### Environment-Based Configuration
+- **Console Output**: Formatted training progress with tqdm
+- **TensorBoard**: Integration with TensorBoard for visualization
+- **Early Stopping**: Advanced early stopping with multiple strategies
+- **Optuna**: Hyperparameter optimization integration
+- **Weights & Biases**: Experiment tracking and model versioning
 
-Create environment-specific configs:
+## 📊 Built-in Metrics
 
-```bash
-# Development
-bz_config.development.json
+### Classification Metrics
+- `Accuracy` - Classification accuracy
+- `Precision` - Classification precision
+- `Recall` - Classification recall
+- `F1Score` - F1 score
+- `TopKAccuracy` - Top-K accuracy
 
-# Staging  
-bz_config.staging.json
+### Regression Metrics
+- `MeanSquaredError` - Regression MSE
+- `MeanAbsoluteError` - Regression MAE
 
-# Production
-bz_config.production.json
-```
-
-Set the environment:
-
-```bash
-export BZ_ENV=production
-bz train
-```
-
-### Custom Plugins
-
-Create your own plugin:
-
-```python
-from bz.plugins import Plugin, PluginContext
-
-class MyCustomPlugin(Plugin):
-    def __init__(self, config=None):
-        super().__init__(config=config)
-        self.custom_value = config.get("custom_value", "default")
-    
-    def start_training_session(self, context: PluginContext) -> None:
-        print(f"Starting training with custom value: {self.custom_value}")
-    
-    def end_epoch(self, context: PluginContext) -> None:
-        print(f"Epoch {context.epoch} completed!")
-
-# Register your plugin
-from bz.plugins import register_plugin
-register_plugin("my_custom", MyCustomPlugin, {"custom_value": "hello"})
-```
-
-### Custom Metrics
-
-Create custom metrics:
-
-```python
-from bz.metrics import Metric
-import torch
-from torch import Tensor
-
-class CustomMetric(Metric):
-    def __init__(self, name: str = None):
-        super().__init__(name)
-        self.total_value = 0.0
-        self.count = 0
-    
-    def reset(self) -> None:
-        self.total_value = 0.0
-        self.count = 0
-    
-    def update(self, preds: Tensor, targets: Tensor) -> None:
-        # Your custom metric calculation
-        self.total_value += torch.sum(preds).item()
-        self.count += preds.numel()
-    
-    def compute(self) -> float:
-        return self.total_value / self.count if self.count > 0 else 0.0
-```
-
-### Command Line Options
+## 🔧 Command Line Options
 
 ```bash
 # Basic training
@@ -245,15 +164,23 @@ bz train --epochs 20 --device cuda
 # Custom config file
 bz train --config my_config.json
 
-# Early stopping
-bz train --early-stopping-patience 5 --early-stopping-min-delta 0.01
 
-# List available plugins
-bz list-plugins
 
-# List available metrics
-bz list-metrics
+# Initialize project
+bz init
 ```
+
+## 📚 Documentation
+
+📖 **Full Documentation**: [https://dbuzinski.github.io/bz-cli/](https://dbuzinski.github.io/bz-cli/)
+
+The documentation includes:
+- **Usage Guide**: Complete usage instructions and examples
+- **API Reference**: Comprehensive API documentation
+- **Examples**: Working examples for all features
+- **Plugin System**: How to create and use plugins
+- **Metrics System**: How to use and create custom metrics
+- **Configuration**: Advanced configuration options
 
 ## 🧪 Testing
 
@@ -262,105 +189,6 @@ Run the comprehensive test suite:
 ```bash
 pytest tests/
 ```
-
-The test suite covers:
-- Plugin system functionality
-- Configuration management
-- CLI functionality
-- Trainer components
-- Metrics system
-- Error handling
-
-## 📚 API Reference
-
-### Core Classes
-
-#### `Trainer`
-Main training class with plugin support and error handling.
-
-#### `Plugin`
-Base class for all plugins with lifecycle hooks.
-
-#### `PluginContext`
-Context object passed to plugins during training.
-
-#### `ConfigManager`
-Manages configuration loading, validation, and environment support.
-
-### Plugin Lifecycle Hooks
-
-- `start_training_session()` - Called at training start
-- `load_checkpoint()` - Called when loading checkpoints
-- `start_epoch()` - Called at each epoch start
-- `start_training_loop()` - Called at training loop start
-- `start_training_batch()` - Called at each training batch
-- `end_training_batch()` - Called at each training batch end
-- `end_training_loop()` - Called at training loop end
-- `start_validation_loop()` - Called at validation loop start
-- `start_validation_batch()` - Called at each validation batch
-- `end_validation_batch()` - Called at each validation batch end
-- `end_validation_loop()` - Called at validation loop end
-- `save_checkpoint()` - Called when saving checkpoints
-- `end_epoch()` - Called at each epoch end
-- `end_training_session()` - Called at training end
-
-## 🔌 Built-in Plugins
-
-### Console Output Plugin
-Provides formatted console output with progress bars.
-
-**Configuration:**
-```json
-{
-  "console_out": {
-    "enabled": true,
-    "config": {
-      "update_interval": 1
-    }
-  }
-}
-```
-
-### TensorBoard Plugin
-Integrates with TensorBoard for training visualization.
-
-**Configuration:**
-```json
-{
-  "tensorboard": {
-    "enabled": true,
-    "config": {
-      "log_dir": "runs/experiment"
-    }
-  }
-}
-```
-
-### Weights & Biases Plugin
-Integrates with Weights & Biases for experiment tracking.
-
-**Configuration:**
-```json
-{
-  "wandb": {
-    "enabled": true,
-    "config": {
-      "project_name": "my-experiment",
-      "entity": "my-username"
-    }
-  }
-}
-```
-
-## 📊 Built-in Metrics
-
-- `Accuracy` - Classification accuracy
-- `Precision` - Classification precision
-- `Recall` - Classification recall
-- `F1Score` - F1 score
-- `MeanSquaredError` - Regression MSE
-- `MeanAbsoluteError` - Regression MAE
-- `TopKAccuracy` - Top-K accuracy
 
 ## 🛠️ Development
 
@@ -372,15 +200,17 @@ bz-cli/
 │   ├── __init__.py          # Main trainer and core classes
 │   ├── cli.py              # Command-line interface
 │   ├── config.py           # Configuration management
-│   ├── metrics/            # Metrics system
-│   │   └── __init__.py
+│   ├── metrics/            # Modular metrics system
+│   │   ├── metric.py       # Base metric class
+│   │   ├── accuracy.py     # Individual metric files
+│   │   └── ...
 │   └── plugins/            # Plugin system
-│       ├── __init__.py
 │       ├── plugin.py       # Base plugin class
 │       ├── console_out.py  # Console output plugin
 │       ├── tensorboard.py  # TensorBoard plugin
-│       └── wandb.py        # WandB plugin
-├── tests/                  # Test suite
+│       ├── early_stopping.py # Early stopping plugin
+│       └── ...
+├── tests/                  # Comprehensive test suite
 ├── examples/               # Example projects
 └── docs/                   # Documentation
 ```

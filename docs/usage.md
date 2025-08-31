@@ -14,8 +14,7 @@ Train a model with the current configuration.
 - `--no-compile`: Disable model compilation
 - `--config`: Path to configuration file
 - `--device`: Device to use (auto/cpu/cuda)
-- `--early-stopping-patience`: Enable early stopping with specified patience
-- `--early-stopping-min-delta`: Minimum improvement for early stopping (default: 0.001)
+
 
 **Examples:**
 ```bash
@@ -33,12 +32,6 @@ bz train --device cpu
 
 # Disable model compilation
 bz train --no-compile
-
-# Enable early stopping with 5 epochs patience
-bz train --early-stopping-patience 5
-
-# Enable early stopping with custom minimum delta
-bz train --early-stopping-patience 10 --early-stopping-min-delta 0.0001
 ```
 
 ### `bz init`
@@ -82,8 +75,7 @@ Create a `bz_config.json` file in your project directory:
     "device": "auto",
     "compile": true,
     "checkpoint_interval": 5,
-    "early_stopping_patience": 3,
-    "early_stopping_min_delta": 0.001
+
   },
   "plugins": {
     "console_out": {
@@ -131,8 +123,7 @@ Create a `bz_config.json` file in your project directory:
 | `device` | string | "auto" | Device to use (auto/cpu/cuda) |
 | `compile` | bool | true | Enable model compilation |
 | `checkpoint_interval` | int | 0 | Checkpoint save interval |
-| `early_stopping_patience` | int | null | Early stopping patience |
-| `early_stopping_min_delta` | float | 0.001 | Minimum improvement for early stopping |
+
 
 #### Plugin Configuration
 
@@ -256,13 +247,7 @@ Automatically stops training when the monitored metric stops improving.
 - `min_epochs`: Minimum epochs before early stopping can trigger
 
 **CLI Usage:**
-```bash
-# Enable early stopping with 5 epochs patience
-bz train --early-stopping-patience 5
 
-# Enable early stopping with custom minimum delta
-bz train --early-stopping-patience 10 --early-stopping-min-delta 0.0001
-```
 
 ### Creating Custom Plugins
 

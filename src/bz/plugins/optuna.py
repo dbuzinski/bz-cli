@@ -47,8 +47,6 @@ class OptunaConfig:
     hyperparameters: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
     # Early stopping
-    early_stopping_patience: int = 5
-    early_stopping_min_delta: float = 0.001
 
     # Reporting
     report_interval: int = 1  # Report every N trials
@@ -265,11 +263,9 @@ class OptunaPlugin(Plugin):
             pass
 
         # Check early stopping
-        if self.config.early_stopping_patience > 0 and self.no_improvement_count >= self.config.early_stopping_patience:
-            self.logger.info(
-                f"Early stopping triggered after {self.no_improvement_count} " f"trials without improvement"
-            )
-            return False
+        # Early stopping is now handled by the EarlyStoppingPlugin
+        # This is just a placeholder for Optuna-specific stopping logic if needed
+        pass
 
         return True
 

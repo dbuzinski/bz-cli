@@ -232,8 +232,6 @@ class Trainer:
         checkpoint_interval=0,
         metrics: Optional[List[Metric]] = None,
         hyperparameters: Optional[Dict[str, Any]] = None,
-        early_stopping_patience=None,
-        early_stopping_min_delta=0.001,
     ):
         """
         Train a model with the specified configuration.
@@ -250,8 +248,7 @@ class Trainer:
             checkpoint_interval: How often to save checkpoints
             metrics: List of metrics to track
             hyperparameters: Dictionary of hyperparameters
-            early_stopping_patience: Early stopping patience
-            early_stopping_min_delta: Minimum improvement for early stopping
+
         """
         if metrics is None:
             metrics = []
