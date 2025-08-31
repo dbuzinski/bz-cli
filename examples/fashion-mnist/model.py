@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class GarmentClassifier(nn.Module):
     def __init__(self):
         super(GarmentClassifier, self).__init__()
@@ -19,4 +20,3 @@ class GarmentClassifier(nn.Module):
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
-

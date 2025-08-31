@@ -41,7 +41,7 @@ class ProfilerPlugin(Plugin):
             enable_gpu_monitoring: Whether to monitor GPU usage
             **kwargs: Additional arguments passed to base class
         """
-        super().__init__(**kwargs)
+        super().__init__(name=self.name, **kwargs)
         self.log_interval = log_interval
         self.enable_gpu_monitoring = enable_gpu_monitoring
         self.performance_history: list[PerformanceMetrics] = []

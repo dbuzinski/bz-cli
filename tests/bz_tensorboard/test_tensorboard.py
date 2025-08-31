@@ -4,7 +4,7 @@ Tests for the TensorBoardPlugin.
 
 from unittest.mock import Mock, patch
 from bz.plugins import PluginContext
-from bz.plugins.tensorboard import TensorBoardPlugin
+from bz_tensorboard.tensorboard_plugin import TensorBoardPlugin
 
 
 class TestTensorBoardPlugin:
@@ -17,7 +17,7 @@ class TestTensorBoardPlugin:
         assert plugin.log_dir == "/test/log/dir"
         assert plugin.writer is None
 
-    @patch("bz.plugins.tensorboard.SummaryWriter")
+    @patch("bz_tensorboard.tensorboard_plugin.SummaryWriter")
     def test_tensorboard_plugin_start_training_session(self, mock_writer_class):
         """Test TensorBoardPlugin start_training_session."""
         mock_writer = Mock()
@@ -30,7 +30,7 @@ class TestTensorBoardPlugin:
         mock_writer_class.assert_called_with("/test/log/dir")
         assert plugin.writer == mock_writer
 
-    @patch("bz.plugins.tensorboard.SummaryWriter")
+    @patch("bz_tensorboard.tensorboard_plugin.SummaryWriter")
     def test_tensorboard_plugin_start_training_session_error(self, mock_writer_class):
         """Test TensorBoardPlugin start_training_session with error."""
         mock_writer_class.side_effect = Exception("TensorBoard error")
@@ -41,7 +41,7 @@ class TestTensorBoardPlugin:
         plugin.start_training_session(context)
         assert plugin.writer is None
 
-    @patch("bz.plugins.tensorboard.SummaryWriter")
+    @patch("bz_tensorboard.tensorboard_plugin.SummaryWriter")
     def test_tensorboard_plugin_end_training_batch(self, mock_writer_class):
         """Test TensorBoardPlugin end_training_batch."""
         mock_writer = Mock()

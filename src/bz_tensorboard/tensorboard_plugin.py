@@ -6,7 +6,7 @@ Provides TensorBoard integration for training visualization.
 from typing import Optional, Dict, Any
 from torch.utils.tensorboard import SummaryWriter
 
-from .plugin import Plugin, PluginContext
+from bz.plugins import Plugin, PluginContext
 
 
 class TensorBoardPlugin(Plugin):
@@ -23,7 +23,7 @@ class TensorBoardPlugin(Plugin):
             log_dir: Directory for TensorBoard logs
             **kwargs: Additional arguments passed to base class
         """
-        super().__init__(**kwargs)
+        super().__init__(name=self.name, **kwargs)
         self.training_loader_len = training_loader_len
         self.writer: Optional[SummaryWriter] = None
         self.log_dir = log_dir

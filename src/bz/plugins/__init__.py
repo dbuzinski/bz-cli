@@ -54,22 +54,12 @@ class PluginRegistry:
         """Register built-in plugins directly."""
         try:
             from .console_out import ConsoleOutPlugin
-            from .tensorboard import TensorBoardPlugin
             from .early_stopping import EarlyStoppingPlugin
-            from .optuna import OptunaPlugin
-            from .profiler import ProfilerPlugin
-            from .wandb import WandBPlugin
 
             self._plugins["console_out"] = ConsoleOutPlugin
-            self._plugins["tensorboard"] = TensorBoardPlugin
             self._plugins["early_stopping"] = EarlyStoppingPlugin
-            self._plugins["optuna"] = OptunaPlugin
-            self._plugins["profiler"] = ProfilerPlugin
-            self._plugins["wandb"] = WandBPlugin
 
-            logger.info(
-                "Registered built-in plugins: console_out, tensorboard, early_stopping, optuna, profiler, wandb"
-            )
+            logger.info("Registered built-in plugins: console_out, early_stopping")
         except ImportError as e:
             logger.warning(f"Failed to import built-in plugins: {e}")
 

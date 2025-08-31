@@ -30,10 +30,14 @@ class TestPluginRegistry:
         registry._plugins.clear()
         registry._register_builtin_plugins()
 
-        # Should have registered built-in plugins
+        # Should have registered built-in plugins (only lightweight ones)
         assert "console_out" in registry._plugins
-        assert "tensorboard" in registry._plugins
         assert "early_stopping" in registry._plugins
+        # Heavy plugins are now in separate packages and discovered via entry points
+        assert "tensorboard" not in registry._plugins
+        assert "optuna" not in registry._plugins
+        assert "wandb" not in registry._plugins
+        assert "profiler" not in registry._plugins
 
     def test_create_plugin_with_name_and_create_method(self):
         """Test plugin creation with name and create method."""

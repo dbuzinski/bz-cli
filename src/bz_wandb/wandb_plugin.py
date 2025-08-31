@@ -26,7 +26,7 @@ class WandBPlugin(Plugin):
             config: Plugin configuration
             **kwargs: Additional arguments passed to base class
         """
-        super().__init__(config=config, **kwargs)
+        super().__init__(name=self.name, config=config, **kwargs)
         self.project_name = project_name
         self.entity = entity
         self.run = None

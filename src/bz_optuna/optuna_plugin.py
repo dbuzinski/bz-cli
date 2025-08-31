@@ -25,7 +25,7 @@ except ImportError:
     Trial = Any  # type: ignore
     Study = Any  # type: ignore
 
-from .plugin import Plugin, PluginContext
+from bz.plugins import Plugin, PluginContext
 
 
 @dataclass
@@ -67,7 +67,7 @@ class OptunaPlugin(Plugin):
 
     def __init__(self, config: Optional[OptunaConfig] = None, enable_gpu_monitoring: bool = True):
         """Initialize the Optuna plugin."""
-        super().__init__()
+        super().__init__(name=self.name)
 
         if not OPTUNA_AVAILABLE:
             raise ImportError("Optuna is not installed. Install it with: pip install optuna")

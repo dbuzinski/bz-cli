@@ -8,10 +8,6 @@ requires-python = ">=3.10"
 
 dependencies = [
     "numpy>=2.2.5",
-    "optuna>=4.3.0",
-    "psutil>=5.9.0",
-    "standard-imghdr>=3.13.0",
-    "tensorboard>=2.19.0",
     "torch>=2.7.0",
     "torchvision>=0.22.0",
     "tqdm>=4.67.1",
@@ -27,19 +23,39 @@ dev = [
     "ipython",
 ]
 
+# Plugin-specific optional dependencies
+optuna = ["optuna>=4.3.0"]
+wandb = ["wandb>=0.15.0"]
+tensorboard = ["tensorboard>=2.19.0"]
+profiler = ["psutil>=5.9.0"]
+
+# All plugins
+all = [
+    "optuna>=4.3.0",
+    "wandb>=0.15.0", 
+    "tensorboard>=2.19.0",
+    "psutil>=5.9.0",
+]
+
 [project.scripts]
 bz = "bz.cli:main"
 
 [project.entry-points."bz.plugins"]
 console_out = "bz.plugins.console_out:ConsoleOutPlugin"
-tensorboard = "bz.plugins.tensorboard:TensorBoardPlugin"
-wandb = "bz.plugins.wandb:WandBPlugin"
-profiler = "bz.plugins.profiler:ProfilerPlugin"
-optuna = "bz.plugins.optuna:OptunaPlugin"
 early_stopping = "bz.plugins.early_stopping:EarlyStoppingPlugin"
+optuna = "bz_optuna.optuna_plugin:OptunaPlugin"
+wandb = "bz_wandb.wandb_plugin:WandBPlugin"
+tensorboard = "bz_tensorboard.tensorboard_plugin:TensorBoardPlugin"
+profiler = "bz_profiler.profiler_plugin:ProfilerPlugin"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/bz"]
+packages = [
+    "src/bz",
+    "src/bz_optuna",
+    "src/bz_wandb", 
+    "src/bz_tensorboard",
+    "src/bz_profiler"
+]
 
 [build-system]
 requires = ["hatchling"]

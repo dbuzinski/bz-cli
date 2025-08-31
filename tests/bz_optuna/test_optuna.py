@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from bz.plugins.optuna import OptunaPlugin, OptunaConfig
+from bz_optuna.optuna_plugin import OptunaPlugin, OptunaConfig
 from bz.plugins.plugin import PluginContext
 
 
@@ -74,7 +74,7 @@ class TestOptunaPlugin:
 
     def test_plugin_initialization_without_optuna(self):
         """Test plugin initialization when Optuna is not available."""
-        with patch("bz.plugins.optuna.OPTUNA_AVAILABLE", False):
+        with patch("bz_optuna.optuna_plugin.OPTUNA_AVAILABLE", False):
             with pytest.raises(ImportError, match="Optuna is not installed"):
                 OptunaPlugin()
 
