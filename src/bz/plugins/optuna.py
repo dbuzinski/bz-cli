@@ -1,4 +1,4 @@
-# type: ignore[import,import-not-found]
+# mypy: disable-error-code="import,import-not-found"
 """
 Optuna plugin for hyperparameter optimization.
 
@@ -21,8 +21,9 @@ try:
     OPTUNA_AVAILABLE = True
 except ImportError:
     OPTUNA_AVAILABLE = False
-    Trial = Any
-    Study = Any
+    # Type aliases for when optuna is not available
+    Trial = Any  # type: ignore
+    Study = Any  # type: ignore
 
 from .plugin import Plugin, PluginContext
 
@@ -71,7 +72,7 @@ class OptunaPlugin(Plugin):
         if not OPTUNA_AVAILABLE:
             raise ImportError("Optuna is not installed. Install it with: pip install optuna")
 
-        self.config = config or OptunaConfig()
+        self.config: OptunaConfig = config or OptunaConfig()
         self.logger = logging.getLogger(__name__)
 
         # Optuna study
@@ -148,7 +149,8 @@ class OptunaPlugin(Plugin):
             final_score = self._get_final_score(context)
 
             # Complete trial
-            self.study.tell(self.current_trial, final_score)
+            if self.study is not None:
+                self.study.tell(self.current_trial, final_score)
 
             # Track trial results
             self.trial_scores.append(final_score)
@@ -350,7 +352,7 @@ class OptunaPlugin(Plugin):
         elif self.config.pruner == "hyperband":
             return optuna.pruners.HyperbandPruner()
         elif self.config.pruner == "percentile":
-            return optuna.pruners.PercentilePruner()
+            return optuna.pruners.PercentilePruner(percentile=50.0)
         else:
             return None
 

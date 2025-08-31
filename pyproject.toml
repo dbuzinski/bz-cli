@@ -46,6 +46,7 @@ dev = [
     "ruff>=0.12.11",
     "black>=25.1.0",
     "mypy>=1.17.1",
+    "types-psutil>=7.0.0.20250822",
 ]
 
 [tool.ruff]

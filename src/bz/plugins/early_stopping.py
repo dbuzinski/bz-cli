@@ -52,7 +52,7 @@ class EarlyStoppingPlugin(Plugin):
     def __init__(self, config: Optional[EarlyStoppingConfig] = None):
         """Initialize the early stopping plugin."""
         super().__init__()
-        self.config = config or EarlyStoppingConfig()
+        self.config: EarlyStoppingConfig = config or EarlyStoppingConfig()
         self.logger = logging.getLogger(__name__)
 
         # Early stopping state

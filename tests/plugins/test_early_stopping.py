@@ -126,7 +126,7 @@ class TestEarlyStoppingPlugin:
         plugin.end_epoch(context)
         assert plugin.best_score == 1.0
         assert plugin.patience_counter == 0
-        assert not hasattr(context, "should_stop_training")
+        assert not context.should_stop_training
 
         # Second call - no improvement
         context.epoch = 2
@@ -135,7 +135,7 @@ class TestEarlyStoppingPlugin:
         plugin.end_epoch(context)
         assert plugin.best_score == 1.0  # Should not change
         assert plugin.patience_counter == 1
-        assert not hasattr(context, "should_stop_training")
+        assert not context.should_stop_training
 
         # Third call - still no improvement
         context.epoch = 3
@@ -143,7 +143,7 @@ class TestEarlyStoppingPlugin:
         context.validation_batch_count = 1
         plugin.end_epoch(context)
         assert plugin.patience_counter == 2
-        assert not hasattr(context, "should_stop_training")
+        assert not context.should_stop_training
 
         # Fourth call - should trigger early stopping
         context.epoch = 4
@@ -151,7 +151,6 @@ class TestEarlyStoppingPlugin:
         context.validation_batch_count = 1
         plugin.end_epoch(context)
         assert plugin.patience_counter == 3
-        assert hasattr(context, "should_stop_training")
         assert context.should_stop_training is True
 
     def test_end_epoch_with_improvement(self, plugin_config, context):
@@ -176,7 +175,7 @@ class TestEarlyStoppingPlugin:
         plugin.end_epoch(context)
         assert plugin.best_score == 0.5  # Should update
         assert plugin.patience_counter == 0  # Should reset
-        assert not hasattr(context, "should_stop_training")
+        assert not context.should_stop_training
 
     def test_end_epoch_minimum_epochs(self, context):
         """Test that early stopping doesn't trigger before minimum epochs."""
@@ -195,14 +194,13 @@ class TestEarlyStoppingPlugin:
             context.validation_loss_total = 1.0 + epoch * 0.1  # Getting worse
             context.validation_batch_count = 1
             plugin.end_epoch(context)
-            assert not hasattr(context, "should_stop_training")
+            assert not context.should_stop_training
 
         # Should trigger after min_epochs
         context.epoch = 6
         context.validation_loss_total = 1.6
         context.validation_batch_count = 1
         plugin.end_epoch(context)
-        assert hasattr(context, "should_stop_training")
         assert context.should_stop_training is True
 
     def test_get_monitored_metric_validation_loss(self, plugin_config, context):

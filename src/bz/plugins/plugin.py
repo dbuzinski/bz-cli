@@ -24,6 +24,7 @@ class PluginContext:
     validation_metrics: Dict[str, float] = field(default_factory=dict)
     hyperparameters: Dict[str, Any] = field(default_factory=dict)
     extra: Dict[str, Any] = field(default_factory=dict)
+    should_stop_training: bool = False
 
 
 class PluginError(Exception):
@@ -40,13 +41,13 @@ class Plugin(ABC):
     to perform additional actions like logging, visualization, etc.
     """
 
-    def __init__(self, name: Optional[str] = None, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, name: Optional[str] = None, config: Optional[Any] = None):
         """
         Initialize plugin.
 
         Args:
             name: Optional custom name for the plugin
-            config: Plugin-specific configuration
+            config: Plugin-specific configuration (can be dict, dataclass, or other type)
         """
         self.name = name or self.__class__.__name__
         self.config = config or {}
