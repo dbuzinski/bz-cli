@@ -8,7 +8,7 @@ import os
 import torch
 import torch.nn as nn
 from unittest.mock import Mock, patch
-from bz import Trainer, CheckpointManager, EarlyStopping, TrainingLoop
+from bz import Trainer, CheckpointManager, TrainingLoop
 from bz.plugins import PluginContext, Plugin
 
 
@@ -106,85 +106,6 @@ class TestCheckpointManager:
 
             latest_epoch = manager._find_latest_checkpoint_epoch()
             assert latest_epoch == 5
-
-
-class TestEarlyStopping:
-    """Test EarlyStopping functionality."""
-
-    def test_early_stopping_initialization(self):
-        """Test EarlyStopping initialization."""
-        early_stopping = EarlyStopping(patience=5, min_delta=0.01)
-
-        assert early_stopping.patience == 5
-        assert early_stopping.min_delta == 0.01
-        assert early_stopping.best_loss == float("inf")
-        assert early_stopping.patience_counter == 0
-
-    def test_early_stopping_improvement(self):
-        """Test EarlyStopping with improvement."""
-        early_stopping = EarlyStopping(patience=3, min_delta=0.01)
-
-        # First call with improvement
-        should_stop = early_stopping.should_stop(1.0)
-        assert not should_stop
-        assert early_stopping.best_loss == 1.0
-        assert early_stopping.patience_counter == 0
-
-        # Second call with improvement
-        should_stop = early_stopping.should_stop(0.5)
-        assert not should_stop
-        assert early_stopping.best_loss == 0.5
-        assert early_stopping.patience_counter == 0
-
-    def test_early_stopping_no_improvement(self):
-        """Test EarlyStopping without improvement."""
-        early_stopping = EarlyStopping(patience=3, min_delta=0.01)
-
-        # First call with improvement
-        early_stopping.should_stop(1.0)
-
-        # Calls without improvement
-        should_stop = early_stopping.should_stop(1.1)
-        assert not should_stop
-        assert early_stopping.patience_counter == 1
-
-        should_stop = early_stopping.should_stop(1.2)
-        assert not should_stop
-        assert early_stopping.patience_counter == 2
-
-        should_stop = early_stopping.should_stop(1.3)
-        assert should_stop
-        assert early_stopping.patience_counter == 3
-
-    def test_early_stopping_min_delta(self):
-        """Test EarlyStopping with minimum delta."""
-        early_stopping = EarlyStopping(patience=3, min_delta=0.1)
-
-        # First call
-        early_stopping.should_stop(1.0)
-
-        # Small improvement (less than min_delta)
-        should_stop = early_stopping.should_stop(0.95)
-        assert not should_stop
-        assert early_stopping.patience_counter == 1
-
-        # Large improvement (more than min_delta)
-        should_stop = early_stopping.should_stop(0.8)
-        assert not should_stop
-        assert early_stopping.patience_counter == 0
-        assert early_stopping.best_loss == 0.8
-
-    def test_get_best_loss(self):
-        """Test getting best loss."""
-        early_stopping = EarlyStopping(patience=3)
-
-        assert early_stopping.get_best_loss() == float("inf")
-
-        early_stopping.should_stop(1.0)
-        assert early_stopping.get_best_loss() == 1.0
-
-        early_stopping.should_stop(0.5)
-        assert early_stopping.get_best_loss() == 0.5
 
 
 class TestTrainingLoop:

@@ -13,6 +13,7 @@ from bz import Trainer
 from bz.config import get_config_manager, ConfigManager
 from bz.plugins import load_plugins_from_config, get_plugin_registry
 from bz.metrics import get_metric, list_available_metrics
+from bz.health import run_health_check as run_health_check_func, print_health_report
 
 
 def main():
@@ -31,6 +32,8 @@ def main():
             run_list_plugins(args)
         elif args.command == "list-metrics":
             run_list_metrics(args)
+        elif args.command == "health":
+            run_health_check(args)
         else:
             parser.print_help()
     except Exception as e:
@@ -67,6 +70,11 @@ Examples:
     train_parser.add_argument("--early-stopping-patience", type=int, help="Early stopping patience")
     train_parser.add_argument("--early-stopping-min-delta", type=float, help="Early stopping minimum delta")
 
+    # Optuna hyperparameter optimization
+    train_parser.add_argument("--optimize", action="store_true", help="Enable hyperparameter optimization with Optuna")
+    train_parser.add_argument("--n-trials", type=int, default=10, help="Number of optimization trials")
+    train_parser.add_argument("--study-name", default="bz_optimization", help="Optuna study name")
+
     # Validate command
     validate_parser = subparsers.add_parser("validate", help="Validate a trained model")
     validate_parser.add_argument("--model-path", type=str, help="Path to model checkpoint")
@@ -84,6 +92,10 @@ Examples:
 
     # List metrics command
     subparsers.add_parser("list-metrics", help="List available metrics")
+
+    # Health check command
+    health_parser = subparsers.add_parser("health", help="Run system health check")
+    health_parser.add_argument("--json", action="store_true", help="Output results in JSON format")
 
     return parser
 
@@ -146,6 +158,27 @@ def run_training(args):
 
     # Load plugins based on configuration
     plugin_configs = config_manager.load().get("plugins", {})
+
+    # Add Optuna plugin if optimization is requested
+    if args.optimize:
+        from .plugins.optuna import OptunaConfig
+
+        optuna_config = OptunaConfig(study_name=args.study_name, n_trials=args.n_trials, direction="minimize")
+        plugin_configs["optuna"] = {"enabled": True, "config": optuna_config.__dict__}
+        print(f"Optuna optimization enabled: {args.n_trials} trials, study={args.study_name}")
+
+    # Add early stopping plugin if configured
+    if args.early_stopping_patience:
+        from .plugins.early_stopping import EarlyStoppingConfig
+
+        early_stopping_config = EarlyStoppingConfig(
+            patience=args.early_stopping_patience, min_delta=args.early_stopping_min_delta or 0.001
+        )
+        plugin_configs["early_stopping"] = {"enabled": True, "config": early_stopping_config.__dict__}
+        print(
+            f"Early stopping enabled: patience={args.early_stopping_patience}, min_delta={early_stopping_config.min_delta}"
+        )
+
     plugins = load_plugins_from_config(plugin_configs, training_spec)
     trainer.plugins = plugins
 
@@ -244,6 +277,17 @@ def run_list_metrics(args):
     metrics = list_available_metrics()
     for metric_name in sorted(metrics):
         print(f"  - {metric_name}")
+
+
+def run_health_check(args):
+    """Run system health check."""
+    if args.json:
+        import json
+
+        health_data = run_health_check_func()
+        print(json.dumps(health_data, indent=2))
+    else:
+        print_health_report()
 
 
 def load_metrics_from_config(config_manager: ConfigManager, module) -> list:

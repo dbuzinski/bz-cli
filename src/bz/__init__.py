@@ -6,26 +6,38 @@ Provides extensible training with plugins and metrics.
 import hashlib
 import inspect
 import json
+import logging
 import os
+from typing import Dict, Any, List, Optional
+
 import torch
 
-from typing import Dict, Any, List, Optional
-import logging
-
-from .plugins import PluginContext, Plugin
 from .metrics import Metric
+from .plugins import Plugin, PluginContext
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Default device for training
 default_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class CheckpointManager:
-    """Manages model checkpointing and resuming."""
+    """
+    Manages model checkpointing and resuming.
+
+    Handles saving and loading model checkpoints including model state,
+    optimizer state, loss function state, and training data loader state.
+    """
 
     def __init__(self, checkpoint_dir: str):
+        """
+        Initialize checkpoint manager.
+
+        Args:
+            checkpoint_dir: Directory to store checkpoints
+        """
         self.checkpoint_dir = checkpoint_dir
         os.makedirs(checkpoint_dir, exist_ok=True)
 
@@ -81,34 +93,21 @@ class CheckpointManager:
         return max(epochs) if epochs else None
 
 
-class EarlyStopping:
-    """Manages early stopping logic."""
-
-    def __init__(self, patience: int, min_delta: float = 0.001):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.best_loss = float("inf")
-        self.patience_counter = 0
-
-    def should_stop(self, current_loss: float) -> bool:
-        """Check if training should stop early."""
-        if current_loss < self.best_loss - self.min_delta:
-            self.best_loss = current_loss
-            self.patience_counter = 0
-            return False
-        else:
-            self.patience_counter += 1
-            return self.patience_counter >= self.patience
-
-    def get_best_loss(self) -> float:
-        """Get the best loss seen so far."""
-        return self.best_loss
-
-
 class TrainingLoop:
-    """Handles the core training loop logic."""
+    """
+    Handles the core training loop logic.
+
+    Manages the execution of training and validation epochs,
+    including metric updates and plugin lifecycle hooks.
+    """
 
     def __init__(self, trainer: "Trainer"):
+        """
+        Initialize training loop.
+
+        Args:
+            trainer: Reference to the parent trainer instance
+        """
         self.trainer = trainer
 
     def run_training_epoch(
@@ -199,9 +198,19 @@ class TrainingLoop:
 
 
 class Trainer:
-    """Main trainer class for machine learning model training."""
+    """
+    Main trainer class for machine learning model training.
+
+    Orchestrates the complete training process including:
+    - Plugin lifecycle management
+    - Checkpointing and resumption
+    - Training and validation loops
+    - Metric tracking
+    - Early stopping
+    """
 
     def __init__(self):
+        """Initialize trainer with empty plugin list and training loop."""
         self.plugins: List[Plugin] = []
         self.logger = logger
         self.training_loop = TrainingLoop(self)
@@ -253,11 +262,6 @@ class Trainer:
         context = PluginContext()
         context.hyperparameters = hyperparameters
 
-        # Initialize early stopping
-        early_stopping = None
-        if early_stopping_patience:
-            early_stopping = EarlyStopping(early_stopping_patience, early_stopping_min_delta)
-
         # Compute training signature and setup checkpoint manager
         training_signature = self._compute_training_signature(model, optimizer, loss_fn, hyperparameters)
         checkpoint_dir = os.path.join(".bz", "checkpoints", training_signature)
@@ -294,25 +298,11 @@ class Trainer:
             # Validation epoch
             self.training_loop.run_validation_epoch(context, model, loss_fn, validation_loader, device, metrics)
 
-            # Early stopping check
-            if early_stopping and context.validation_batch_count > 0:
-                current_validation_loss = context.validation_loss_total / context.validation_batch_count
-                if early_stopping.should_stop(current_validation_loss):
-                    self.logger.info("Early stopping triggered")
-                    break
-                else:
-                    # Save best model
-                    best_model_path = os.path.join(checkpoint_dir, "best_model.pth")
-                    torch.save(
-                        {
-                            "model_state": model.state_dict(),
-                            "optimizer_state": optimizer.state_dict(),
-                            "epoch": context.epoch,
-                            "validation_loss": early_stopping.get_best_loss(),
-                        },
-                        best_model_path,
-                    )
-                    self.logger.info(f"New best model saved with validation loss: {early_stopping.get_best_loss():.4f}")
+            # Early stopping is now handled by the EarlyStoppingPlugin
+            # Check if any plugin has requested to stop training
+            if hasattr(context, "should_stop_training") and context.should_stop_training:
+                self.logger.info("Training stopped by plugin")
+                break
 
             # Save checkpoint
             if checkpoint_interval and (epoch + 1) % checkpoint_interval == 0:
@@ -348,16 +338,29 @@ class Trainer:
         return hashlib.sha256(serialized.encode()).hexdigest()[:16]
 
 
-# Backward compatibility functions
-def load_config(path=None):
-    """Load configuration file (backward compatibility)."""
+def load_config(path: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Load configuration file (backward compatibility).
+
+    Args:
+        path: Optional path to configuration file
+
+    Returns:
+        Configuration dictionary
+
+    Note:
+        This function searches for configuration in the following order:
+        1. Provided path (if specified)
+        2. BZ_CONFIG environment variable
+        3. config.json in current directory
+        4. Empty dictionary if no config found
+    """
     # Load file if provided a path
     if path:
         with open(path, "r") as f:
             return json.load(f)
 
-    # If BZ_CONFIG environment variable is set, load
-    # the file it points to
+    # If BZ_CONFIG environment variable is set, load the file it points to
     env_path = os.environ.get("BZ_CONFIG")
     if env_path and os.path.isfile(env_path):
         with open(env_path, "r") as f:
@@ -370,3 +373,13 @@ def load_config(path=None):
             return json.load(f)
 
     return {}
+
+
+__all__ = [
+    "Trainer",
+    "TrainingLoop",
+    "CheckpointManager",
+    "load_config",
+    "default_device",
+    "logger",
+]

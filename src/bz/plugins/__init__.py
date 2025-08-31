@@ -9,6 +9,9 @@ from .plugin import get_plugin_registry, register_plugin, create_plugin, list_pl
 from .console_out import ConsoleOutPlugin
 from .tensorboard import TensorBoardPlugin
 from .wandb import WandBPlugin
+from .profiler import ProfilerPlugin
+from .optuna import OptunaPlugin, OptunaConfig
+from .early_stopping import EarlyStoppingPlugin, EarlyStoppingConfig
 
 # Register built-in plugins
 _plugin_registry = get_plugin_registry()
@@ -21,6 +24,38 @@ register_plugin("tensorboard", TensorBoardPlugin, {"log_dir": "runs/experiment"}
 
 # Register WandB plugin
 register_plugin("wandb", WandBPlugin, {"project_name": "bz-experiments", "entity": None})
+
+# Register Profiler plugin
+register_plugin("profiler", ProfilerPlugin, {"log_interval": 10, "enable_gpu_monitoring": True})
+
+# Register Optuna plugin
+register_plugin(
+    "optuna",
+    OptunaPlugin,
+    {
+        "study_name": "bz_optimization",
+        "n_trials": 10,
+        "direction": "minimize",
+        "hyperparameters": {
+            "learning_rate": {"type": "loguniform", "low": 1e-5, "high": 1e-1},
+            "batch_size": {"type": "categorical", "choices": [16, 32, 64, 128]},
+        },
+    },
+)
+
+# Register Early Stopping plugin
+register_plugin(
+    "early_stopping",
+    EarlyStoppingPlugin,
+    {
+        "enabled": True,
+        "patience": 10,
+        "min_delta": 0.001,
+        "monitor": "validation_loss",
+        "mode": "min",
+        "strategy": "patience",
+    },
+)
 
 
 def default_plugins(spec):
@@ -73,6 +108,26 @@ def load_plugins_from_config(plugin_configs: dict, spec) -> List[Plugin]:
             wandb_plugin: WandBPlugin = WandBPlugin.init(spec, project_name, entity)
             plugins.append(wandb_plugin)
 
+        elif plugin_name == "profiler":
+            log_interval = plugin_config.get("log_interval", 10)
+            enable_gpu_monitoring = plugin_config.get("enable_gpu_monitoring", True)
+            profiler_plugin: ProfilerPlugin = ProfilerPlugin.init(spec, log_interval, enable_gpu_monitoring)
+            plugins.append(profiler_plugin)
+
+        elif plugin_name == "optuna":
+            from .optuna import OptunaConfig
+
+            optuna_config = OptunaConfig(**plugin_config)
+            optuna_plugin: OptunaPlugin = OptunaPlugin(optuna_config)
+            plugins.append(optuna_plugin)
+
+        elif plugin_name == "early_stopping":
+            from .early_stopping import EarlyStoppingConfig
+
+            early_stopping_config = EarlyStoppingConfig(**plugin_config)
+            early_stopping_plugin: EarlyStoppingPlugin = EarlyStoppingPlugin(early_stopping_config)
+            plugins.append(early_stopping_plugin)
+
         else:
             # Try to create plugin from registry
             plugin = create_plugin(plugin_name, plugin_config)
@@ -101,6 +156,11 @@ __all__ = [
     "ConsoleOutPlugin",
     "TensorBoardPlugin",
     "WandBPlugin",
+    "ProfilerPlugin",
+    "OptunaPlugin",
+    "OptunaConfig",
+    "EarlyStoppingPlugin",
+    "EarlyStoppingConfig",
     "default_plugins",
     "load_plugins_from_config",
 ]
