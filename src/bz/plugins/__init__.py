@@ -5,7 +5,7 @@ Provides extensible hooks into the training lifecycle.
 
 import logging
 import importlib.metadata
-from typing import List, Type, Dict
+from typing import List, Type, Dict, Optional
 
 from .plugin import Plugin, PluginContext, PluginError
 
@@ -56,16 +56,24 @@ class PluginRegistry:
             from .console_out import ConsoleOutPlugin
             from .tensorboard import TensorBoardPlugin
             from .early_stopping import EarlyStoppingPlugin
+            from .optuna import OptunaPlugin
+            from .profiler import ProfilerPlugin
+            from .wandb import WandBPlugin
 
             self._plugins["console_out"] = ConsoleOutPlugin
             self._plugins["tensorboard"] = TensorBoardPlugin
             self._plugins["early_stopping"] = EarlyStoppingPlugin
+            self._plugins["optuna"] = OptunaPlugin
+            self._plugins["profiler"] = ProfilerPlugin
+            self._plugins["wandb"] = WandBPlugin
 
-            logger.info("Registered built-in plugins: console_out, tensorboard, early_stopping")
+            logger.info(
+                "Registered built-in plugins: console_out, tensorboard, early_stopping, optuna, profiler, wandb"
+            )
         except ImportError as e:
             logger.warning(f"Failed to import built-in plugins: {e}")
 
-    def create_plugin(self, name: str, config_data: dict, training_config) -> Plugin:
+    def create_plugin(self, name: str, config_data: dict, training_config) -> Optional[Plugin]:
         """
         Create a plugin instance.
 
@@ -95,7 +103,7 @@ class PluginRegistry:
         """List all registered plugin names."""
         return list(self._plugins.keys())
 
-    def get_plugin_class(self, name: str) -> Type[Plugin]:
+    def get_plugin_class(self, name: str) -> Optional[Type[Plugin]]:
         """Get a plugin class by name."""
         return self._plugins.get(name)
 
@@ -117,7 +125,7 @@ def list_plugins() -> List[str]:
     return get_plugin_registry().list_plugins()
 
 
-def create_plugin(name: str, config_data: dict = None, training_config=None) -> Plugin:
+def create_plugin(name: str, config_data: Optional[dict] = None, training_config=None) -> Optional[Plugin]:
     """
     Create a plugin instance.
 

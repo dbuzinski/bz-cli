@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 default_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Module-level variable to store CLI-specified config path
-_cli_config_path: str = None
+_cli_config_path: Optional[str] = None
 
 
 def set_cli_config_path(config_path: str) -> None:

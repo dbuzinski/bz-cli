@@ -115,7 +115,7 @@ class TensorBoardPlugin(Plugin):
         return {"log_dir": config_data.get("log_dir", "runs/experiment"), "enabled": config_data.get("enabled", True)}
 
     @staticmethod
-    def create(config_data: dict, training_config) -> "TensorBoardPlugin":
+    def create(config_data: dict, training_config) -> Optional["TensorBoardPlugin"]:
         """Create plugin instance from config data."""
         config = TensorBoardPlugin.load_config(config_data)
         if not config.get("enabled", True):

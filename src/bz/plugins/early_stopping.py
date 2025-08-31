@@ -275,7 +275,7 @@ class EarlyStoppingPlugin(Plugin):
         }
 
     @staticmethod
-    def create(config_data: dict, training_config) -> "EarlyStoppingPlugin":
+    def create(config_data: dict, training_config) -> Optional["EarlyStoppingPlugin"]:
         """Create plugin instance from config data."""
         config = EarlyStoppingPlugin.load_config(config_data)
         if not config.get("enabled", True):

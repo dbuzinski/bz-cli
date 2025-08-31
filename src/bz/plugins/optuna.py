@@ -63,6 +63,8 @@ class OptunaPlugin(Plugin):
     and report results back to Optuna for optimization.
     """
 
+    name = "optuna"  # Plugin name for discovery
+
     def __init__(self, config: Optional[OptunaConfig] = None, enable_gpu_monitoring: bool = True):
         """Initialize the Optuna plugin."""
         super().__init__()
@@ -381,3 +383,30 @@ class OptunaPlugin(Plugin):
             summary["best_params"] = {}
 
         return summary
+
+    @staticmethod
+    def load_config(config_data: dict) -> Dict[str, Any]:
+        """Load configuration from dict data."""
+        return {
+            "study_name": config_data.get("study_name", "bz_optimization"),
+            "storage": config_data.get("storage"),
+            "sampler": config_data.get("sampler", "tpe"),
+            "pruner": config_data.get("pruner"),
+            "n_trials": config_data.get("n_trials", 10),
+            "timeout": config_data.get("timeout"),
+            "direction": config_data.get("direction", "minimize"),
+            "hyperparameters": config_data.get("hyperparameters", {}),
+            "report_interval": config_data.get("report_interval", 1),
+            "save_best_params": config_data.get("save_best_params", True),
+            "save_study": config_data.get("save_study", True),
+            "enabled": config_data.get("enabled", True),
+        }
+
+    @staticmethod
+    def create(config_data: dict, training_config) -> Optional["OptunaPlugin"]:
+        """Create plugin instance from config data."""
+        config = OptunaPlugin.load_config(config_data)
+        if not config.get("enabled", True):
+            return None
+        optuna_config = OptunaConfig(**config)
+        return OptunaPlugin(optuna_config)
