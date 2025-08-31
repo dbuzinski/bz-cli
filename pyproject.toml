@@ -30,6 +30,14 @@ dev = [
 [project.scripts]
 bz = "bz.cli:main"
 
+[project.entry-points."bz.plugins"]
+console_out = "bz.plugins.console_out:ConsoleOutPlugin"
+tensorboard = "bz.plugins.tensorboard:TensorBoardPlugin"
+wandb = "bz.plugins.wandb:WandBPlugin"
+profiler = "bz.plugins.profiler:ProfilerPlugin"
+optuna = "bz.plugins.optuna:OptunaPlugin"
+early_stopping = "bz.plugins.early_stopping:EarlyStoppingPlugin"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/bz"]
 

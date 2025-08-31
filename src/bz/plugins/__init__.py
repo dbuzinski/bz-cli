@@ -3,157 +3,135 @@ Plugin system for bz CLI.
 Provides extensible hooks into the training lifecycle.
 """
 
-from typing import List
-from .plugin import Plugin, PluginContext, PluginError, PluginRegistry
-from .plugin import get_plugin_registry, register_plugin, create_plugin, list_plugins
-from .console_out import ConsoleOutPlugin
-from .tensorboard import TensorBoardPlugin
-from .wandb import WandBPlugin
-from .profiler import ProfilerPlugin
-from .optuna import OptunaPlugin, OptunaConfig
-from .early_stopping import EarlyStoppingPlugin, EarlyStoppingConfig
+import logging
+import importlib.metadata
+from typing import List, Type, Dict
 
-# Register built-in plugins
-_plugin_registry = get_plugin_registry()
+from .plugin import Plugin, PluginContext, PluginError
 
-# Register console output plugin
-register_plugin("console_out", ConsoleOutPlugin, {"update_interval": 1})
-
-# Register TensorBoard plugin
-register_plugin("tensorboard", TensorBoardPlugin, {"log_dir": "runs/experiment"})
-
-# Register WandB plugin
-register_plugin("wandb", WandBPlugin, {"project_name": "bz-experiments", "entity": None})
-
-# Register Profiler plugin
-register_plugin("profiler", ProfilerPlugin, {"log_interval": 10, "enable_gpu_monitoring": True})
-
-# Register Optuna plugin
-register_plugin(
-    "optuna",
-    OptunaPlugin,
-    {
-        "study_name": "bz_optimization",
-        "n_trials": 10,
-        "direction": "minimize",
-        "hyperparameters": {
-            "learning_rate": {"type": "loguniform", "low": 1e-5, "high": 1e-1},
-            "batch_size": {"type": "categorical", "choices": [16, 32, 64, 128]},
-        },
-    },
-)
-
-# Register Early Stopping plugin
-register_plugin(
-    "early_stopping",
-    EarlyStoppingPlugin,
-    {
-        "enabled": True,
-        "patience": 10,
-        "min_delta": 0.001,
-        "monitor": "validation_loss",
-        "mode": "min",
-        "strategy": "patience",
-    },
-)
+logger = logging.getLogger(__name__)
 
 
-def default_plugins(spec):
-    """Get default plugins for a training specification."""
-    return [ConsoleOutPlugin.init(spec)]
+class PluginRegistry:
+    """Registry for managing plugin discovery and loading."""
+
+    def __init__(self):
+        self._plugins: Dict[str, Type[Plugin]] = {}
+        self._discover_and_register()
+
+    def _discover_and_register(self):
+        """Discover and register all available plugins via entry points."""
+        try:
+            # Try the newer API first (Python 3.10+)
+            entry_points = importlib.metadata.entry_points()
+            if hasattr(entry_points, "select"):
+                bz_plugins = entry_points.select(group="bz.plugins")
+            else:
+                # Fallback for older Python versions
+                bz_plugins = entry_points.get("bz.plugins", [])
+        except Exception:
+            # Fallback for very old Python versions
+            bz_plugins = importlib.metadata.entry_points().get("bz.plugins", [])
+
+        # If no plugins found via entry points, register built-in plugins directly
+        if not bz_plugins:
+            logger.info("No plugins found via entry points, registering built-in plugins directly")
+            self._register_builtin_plugins()
+            return
+
+        for entry_point in bz_plugins:
+            try:
+                plugin_class = entry_point.load()
+                if hasattr(plugin_class, "name"):
+                    self._plugins[plugin_class.name] = plugin_class
+                    logger.info(f"Registered plugin: {plugin_class.name}")
+                else:
+                    logger.warning(f"Plugin {entry_point.name} missing 'name' attribute")
+            except Exception as e:
+                logger.warning(f"Failed to load plugin {entry_point.name}: {e}")
+
+    def _register_builtin_plugins(self):
+        """Register built-in plugins directly."""
+        try:
+            from .console_out import ConsoleOutPlugin
+            from .tensorboard import TensorBoardPlugin
+            from .early_stopping import EarlyStoppingPlugin
+
+            self._plugins["console_out"] = ConsoleOutPlugin
+            self._plugins["tensorboard"] = TensorBoardPlugin
+            self._plugins["early_stopping"] = EarlyStoppingPlugin
+
+            logger.info("Registered built-in plugins: console_out, tensorboard, early_stopping")
+        except ImportError as e:
+            logger.warning(f"Failed to import built-in plugins: {e}")
+
+    def create_plugin(self, name: str, config_data: dict, training_config) -> Plugin:
+        """
+        Create a plugin instance.
+
+        Args:
+            name: Plugin name
+            config_data: Plugin configuration data
+            training_config: Training configuration
+
+        Returns:
+            Plugin instance or None if not found
+        """
+        plugin_class = self._plugins.get(name)
+        if plugin_class and hasattr(plugin_class, "create"):
+            try:
+                return plugin_class.create(config_data, training_config)
+            except Exception as e:
+                logger.error(f"Failed to create plugin {name}: {e}")
+                return None
+        elif plugin_class:
+            logger.warning(f"Plugin {name} missing 'create' method")
+            return None
+        else:
+            logger.warning(f"Unknown plugin: {name}")
+            return None
+
+    def list_plugins(self) -> List[str]:
+        """List all registered plugin names."""
+        return list(self._plugins.keys())
+
+    def get_plugin_class(self, name: str) -> Type[Plugin]:
+        """Get a plugin class by name."""
+        return self._plugins.get(name)
 
 
-def load_plugins_from_config(plugin_configs: list, config) -> List[Plugin]:
+# Global registry instance
+_plugin_registry = None
+
+
+def get_plugin_registry() -> PluginRegistry:
+    """Get the global plugin registry instance."""
+    global _plugin_registry
+    if _plugin_registry is None:
+        _plugin_registry = PluginRegistry()
+    return _plugin_registry
+
+
+def list_plugins() -> List[str]:
+    """List all available plugins."""
+    return get_plugin_registry().list_plugins()
+
+
+def create_plugin(name: str, config_data: dict = None, training_config=None) -> Plugin:
     """
-    Load plugins based on configuration.
+    Create a plugin instance.
 
     Args:
-        plugin_configs: List of plugin configurations (strings or objects)
-        config: Training configuration
+        name: Plugin name
+        config_data: Plugin configuration data
+        training_config: Training configuration
 
     Returns:
-        List of configured plugin instances
+        Plugin instance or None if not found
     """
-    plugins: List[Plugin] = []
-
-    for plugin_item in plugin_configs:
-        if isinstance(plugin_item, str):
-            # Simple string plugin name
-            plugin_name = plugin_item
-            plugin_config = {}
-        elif isinstance(plugin_item, dict):
-            # Plugin with configuration
-            plugin_name = list(plugin_item.keys())[0]
-            plugin_config = plugin_item[plugin_name]
-        else:
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Invalid plugin configuration: {plugin_item}")
-            continue
-
-        # Check if plugin is enabled
-        if isinstance(plugin_config, dict) and not plugin_config.get("enabled", True):
-            continue
-
-        # Create plugin based on name
-        if plugin_name == "console_out":
-            console_plugin: ConsoleOutPlugin = ConsoleOutPlugin.init(config)
-            if plugin_config and isinstance(plugin_config, dict):
-                console_plugin.update_interval = plugin_config.get("update_interval", 1)
-            plugins.append(console_plugin)
-
-        elif plugin_name == "tensorboard":
-            log_dir = "runs/experiment"
-            if isinstance(plugin_config, dict):
-                log_dir = plugin_config.get("log_dir", log_dir)
-            tensorboard_plugin: TensorBoardPlugin = TensorBoardPlugin.init(config, log_dir)
-            plugins.append(tensorboard_plugin)
-
-        elif plugin_name == "wandb":
-            project_name = "bz-experiments"
-            entity = None
-            if isinstance(plugin_config, dict):
-                project_name = plugin_config.get("project_name", project_name)
-                entity = plugin_config.get("entity", entity)
-            wandb_plugin: WandBPlugin = WandBPlugin.init(config, project_name, entity)
-            plugins.append(wandb_plugin)
-
-        elif plugin_name == "profiler":
-            log_interval = 10
-            enable_gpu_monitoring = True
-            if isinstance(plugin_config, dict):
-                log_interval = plugin_config.get("log_interval", log_interval)
-                enable_gpu_monitoring = plugin_config.get("enable_gpu_monitoring", enable_gpu_monitoring)
-            profiler_plugin: ProfilerPlugin = ProfilerPlugin.init(config, log_interval, enable_gpu_monitoring)
-            plugins.append(profiler_plugin)
-
-        elif plugin_name == "optuna":
-            from .optuna import OptunaConfig
-
-            optuna_config = OptunaConfig(**(plugin_config if isinstance(plugin_config, dict) else {}))
-            optuna_plugin: OptunaPlugin = OptunaPlugin(optuna_config)
-            plugins.append(optuna_plugin)
-
-        elif plugin_name == "early_stopping":
-            from .early_stopping import EarlyStoppingConfig
-
-            early_stopping_config = EarlyStoppingConfig(**(plugin_config if isinstance(plugin_config, dict) else {}))
-            early_stopping_plugin: EarlyStoppingPlugin = EarlyStoppingPlugin(early_stopping_config)
-            plugins.append(early_stopping_plugin)
-
-        else:
-            # Try to create plugin from registry
-            plugin = create_plugin(plugin_name, plugin_config if isinstance(plugin_config, dict) else {})
-            if plugin is not None:
-                plugins.append(plugin)
-            else:
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Unknown plugin: {plugin_name}")
-
-    return plugins
+    if config_data is None:
+        config_data = {}
+    return get_plugin_registry().create_plugin(name, config_data, training_config)
 
 
 __all__ = [
@@ -162,17 +140,6 @@ __all__ = [
     "PluginError",
     "PluginRegistry",
     "get_plugin_registry",
-    "register_plugin",
-    "create_plugin",
     "list_plugins",
-    "ConsoleOutPlugin",
-    "TensorBoardPlugin",
-    "WandBPlugin",
-    "ProfilerPlugin",
-    "OptunaPlugin",
-    "OptunaConfig",
-    "EarlyStoppingPlugin",
-    "EarlyStoppingConfig",
-    "default_plugins",
-    "load_plugins_from_config",
+    "create_plugin",
 ]

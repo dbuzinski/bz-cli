@@ -8,8 +8,7 @@ import importlib.util
 import os
 import sys
 
-from bz import Trainer
-from bz.config import get_config
+from bz import Trainer, get_config, instantiate_plugins
 from bz.plugins import get_plugin_registry
 from bz.metrics import list_available_metrics
 from bz.health import run_health_check as run_health_check_func, print_health_report
@@ -101,9 +100,10 @@ def run_training(args):
     """Run the training process."""
     # Set CLI config path if specified
     if args.config:
-        from bz.config import set_cli_config_path
+        from bz import set_cli_config_path
+
         set_cli_config_path(args.config)
-    
+
     # Import train.py as module
     train_path = "train.py"
     if not os.path.exists(train_path):
@@ -136,8 +136,6 @@ def run_training(args):
         sys.exit(1)
 
     # Instantiate plugins now that data loaders are set up
-    from bz.config import instantiate_plugins
-
     instantiate_plugins(config)
 
     # Override config with command line arguments

@@ -3,7 +3,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from model import GarmentClassifier
-from bz.config import get_config
+from bz import get_config
 
 # Set seed for reproducibility
 torch.manual_seed(42)
