@@ -14,6 +14,8 @@ Train a model with the current configuration.
 - `--no-compile`: Disable model compilation
 - `--config`: Path to configuration file
 - `--device`: Device to use (auto/cpu/cuda)
+- `--early-stopping-patience`: Enable early stopping with specified patience
+- `--early-stopping-min-delta`: Minimum improvement for early stopping (default: 0.001)
 
 **Examples:**
 ```bash
@@ -31,6 +33,12 @@ bz train --device cpu
 
 # Disable model compilation
 bz train --no-compile
+
+# Enable early stopping with 5 epochs patience
+bz train --early-stopping-patience 5
+
+# Enable early stopping with custom minimum delta
+bz train --early-stopping-patience 10 --early-stopping-min-delta 0.0001
 ```
 
 ### `bz init`
@@ -214,6 +222,48 @@ Logs training metrics to TensorBoard.
 }
 ```
 
+#### EarlyStoppingPlugin
+
+Automatically stops training when the monitored metric stops improving.
+
+**Configuration:**
+```json
+{
+  "early_stopping": {
+    "enabled": true,
+    "config": {
+      "patience": 10,
+      "min_delta": 0.001,
+      "monitor": "validation_loss",
+      "mode": "min",
+      "strategy": "patience",
+      "restore_best_weights": true,
+      "verbose": true,
+      "min_epochs": 0
+    }
+  }
+}
+```
+
+**Parameters:**
+- `patience`: Number of epochs to wait for improvement
+- `min_delta`: Minimum change to qualify as improvement
+- `monitor`: Metric to monitor ("validation_loss", "training_loss")
+- `mode`: "min" (lower is better) or "max" (higher is better)
+- `strategy`: "patience" (simple patience), "plateau" (plateau detection), "custom"
+- `restore_best_weights`: Whether to restore best model weights
+- `verbose`: Enable verbose logging
+- `min_epochs`: Minimum epochs before early stopping can trigger
+
+**CLI Usage:**
+```bash
+# Enable early stopping with 5 epochs patience
+bz train --early-stopping-patience 5
+
+# Enable early stopping with custom minimum delta
+bz train --early-stopping-patience 10 --early-stopping-min-delta 0.0001
+```
+
 ### Creating Custom Plugins
 
 Create a custom plugin by inheriting from the `Plugin` base class:
@@ -314,18 +364,24 @@ The `bz` CLI provides a comprehensive metrics system for tracking model performa
 
 ### Built-in Metrics
 
+The metrics system is organized into individual files for better maintainability:
+
 #### Classification Metrics
 
-- **Accuracy**: Classification accuracy
-- **Precision**: Classification precision
-- **Recall**: Classification recall
-- **F1Score**: F1 score for classification
-- **TopKAccuracy**: Top-K accuracy for classification
+- **Accuracy** (`accuracy.py`): Classification accuracy
+- **Precision** (`precision.py`): Classification precision
+- **Recall** (`recall.py`): Classification recall
+- **F1Score** (`f1_score.py`): F1 score for classification
+- **TopKAccuracy** (`top_k_accuracy.py`): Top-K accuracy for classification
 
 #### Regression Metrics
 
-- **MeanSquaredError**: MSE for regression
-- **MeanAbsoluteError**: MAE for regression
+- **MeanSquaredError** (`mean_squared_error.py`): MSE for regression
+- **MeanAbsoluteError** (`mean_absolute_error.py`): MAE for regression
+
+#### Base Classes
+
+- **Metric** (`metric.py`): Abstract base class for all metrics
 
 ### Using Metrics
 
@@ -345,13 +401,19 @@ metrics = [
 #### Using Metric Registry
 
 ```python
-from bz.metrics import get_metric
+from bz.metrics import get_metric, list_available_metrics
 
+# List all available metrics
+print(list_available_metrics())
+# Output: ['accuracy', 'precision', 'recall', 'f1_score', 'mse', 'mae', 'top5_accuracy']
+
+# Create metrics using registry
 metrics = [
     get_metric("accuracy"),
     get_metric("precision", average="macro"),
     get_metric("recall"),
-    get_metric("f1_score")
+    get_metric("f1_score"),
+    get_metric("top5_accuracy")  # Creates TopKAccuracy with k=5
 ]
 ```
 

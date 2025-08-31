@@ -5,13 +5,14 @@ A powerful and extensible tool for reproducible and efficient training of AI mod
 ## 🚀 Features
 
 - **🔄 Extensible Plugin System**: Hook into training lifecycle with custom plugins
-- **📊 Rich Metrics**: Built-in and custom metrics for model evaluation  
+- **📊 Rich Metrics**: Modular metrics system with classification and regression metrics
 - **⚙️ Unified Configuration**: Type-safe configuration system with validation
 - **🛡️ Error Handling**: Robust error handling and recovery
 - **📈 Monitoring**: Integration with TensorBoard, WandB, and other tools
 - **💾 Checkpointing**: Automatic model checkpointing and resumption
-- **🚀 Early Stopping**: Built-in early stopping with configurable patience
+- **🚀 Early Stopping**: Advanced early stopping with multiple strategies
 - **🎯 CLI Commands**: Intuitive command-line interface
+- **🔧 Type Safety**: Full MyPy type checking support
 
 ## 📦 Installation
 
@@ -42,7 +43,11 @@ bz train
 ### 3. Train with Custom Settings
 
 ```bash
+# Train with custom epochs
 bz train --epochs 10 --config my_config.json
+
+# Train with early stopping
+bz train --early-stopping-patience 5
 ```
 
 ## 📋 Basic Usage
@@ -105,6 +110,7 @@ metrics = [Accuracy()]
 | Command | Description |
 |---------|-------------|
 | `bz train` | Train a model with current configuration |
+| `bz train --early-stopping-patience N` | Train with early stopping |
 | `bz init` | Initialize a new project with templates |
 | `bz validate` | Validate a trained model (coming soon) |
 
@@ -118,7 +124,7 @@ Extend functionality with plugins. See the [Plugin System](usage.md#plugin-syste
 
 ## 📊 Metrics
 
-Track model performance with built-in and custom metrics. See the [Metrics System](usage.md#metrics-system) for details.
+Track model performance with modular metrics system including classification and regression metrics. See the [Metrics System](usage.md#metrics-system) for details.
 
 ## 📚 Examples
 

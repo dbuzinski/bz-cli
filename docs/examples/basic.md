@@ -78,6 +78,15 @@ Edit `bz_config.json` to configure your training:
       "config": {
         "log_dir": "runs/experiment"
       }
+    },
+    "early_stopping": {
+      "enabled": true,
+      "config": {
+        "patience": 3,
+        "min_delta": 0.001,
+        "monitor": "validation_loss",
+        "mode": "min"
+      }
     }
   },
   "metrics": {
@@ -95,7 +104,11 @@ Edit `bz_config.json` to configure your training:
 Start training your model:
 
 ```bash
+# Basic training
 bz train
+
+# Or enable early stopping via CLI
+bz train --early-stopping-patience 3
 ```
 
 You should see output similar to:

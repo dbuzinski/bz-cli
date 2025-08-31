@@ -42,13 +42,13 @@ class Trainer:
 | `early_stopping_patience` | Optional[int] | None | Early stopping patience |
 | `early_stopping_min_delta` | float | 0.001 | Minimum improvement for early stopping |
 
-#### `TrainingContext`
+#### `PluginContext`
 
-Data class containing training context information.
+Data class containing training context information passed to plugins.
 
 ```python
-@dataclass(slots=True)
-class TrainingContext:
+@dataclass
+class PluginContext:
     epoch: int = 0
     training_loss_total: float = 0.0
     validation_loss_total: float = 0.0
@@ -58,6 +58,7 @@ class TrainingContext:
     validation_metrics: Dict[str, float] = field(default_factory=dict)
     hyperparameters: Dict[str, Any] = field(default_factory=dict)
     extra: Dict[str, Any] = field(default_factory=dict)
+    should_stop_training: bool = False
 ```
 
 **Attributes:**
@@ -73,6 +74,7 @@ class TrainingContext:
 | `validation_metrics` | Dict[str, float] | Current validation metrics |
 | `hyperparameters` | Dict[str, Any] | Training hyperparameters |
 | `extra` | Dict[str, Any] | Additional context data |
+| `should_stop_training` | bool | Flag to stop training (set by plugins) |
 
 ### `bz.config` - Configuration Management
 
@@ -487,6 +489,259 @@ class BzConfig(TypedDict, total=False):
     metrics: MetricsConfig
     hyperparameters: Dict[str, Any]
     optuna: Optional[Dict[str, Any]]
+```
+
+## Metrics System
+
+### `bz.metrics` - Metrics Module
+
+The metrics system provides a comprehensive set of evaluation metrics for machine learning models.
+
+#### Base Classes
+
+##### `Metric`
+
+Abstract base class for all metrics.
+
+```python
+class Metric(ABC):
+    def __init__(self, name: Optional[str] = None)
+    def reset(self) -> None
+    def update(self, preds: Tensor, targets: Tensor) -> None
+    def compute(self) -> float
+    @property
+    def name(self) -> str
+```
+
+#### Classification Metrics
+
+##### `Accuracy`
+
+Classification accuracy metric.
+
+```python
+class Accuracy(Metric):
+    def __init__(self, name: Optional[str] = None)
+```
+
+**Usage:**
+```python
+from bz.metrics import Accuracy
+
+metric = Accuracy()
+# For multi-class: preds should be logits (N, C)
+# For binary: preds can be logits (N,) or probabilities (N,)
+```
+
+##### `Precision`
+
+Classification precision metric.
+
+```python
+class Precision(Metric):
+    def __init__(self, average: str = "micro", name: Optional[str] = None)
+```
+
+**Parameters:**
+- `average`: Averaging method ("micro", "macro", "weighted")
+
+##### `Recall`
+
+Classification recall metric.
+
+```python
+class Recall(Metric):
+    def __init__(self, name: Optional[str] = None)
+```
+
+##### `F1Score`
+
+F1 score metric (harmonic mean of precision and recall).
+
+```python
+class F1Score(Metric):
+    def __init__(self, name: Optional[str] = None)
+```
+
+##### `TopKAccuracy`
+
+Top-K accuracy for multi-class classification.
+
+```python
+class TopKAccuracy(Metric):
+    def __init__(self, k: int = 5, name: Optional[str] = None)
+```
+
+**Parameters:**
+- `k`: Number of top predictions to consider
+
+#### Regression Metrics
+
+##### `MeanSquaredError`
+
+Mean squared error for regression tasks.
+
+```python
+class MeanSquaredError(Metric):
+    def __init__(self, name: Optional[str] = None)
+```
+
+##### `MeanAbsoluteError`
+
+Mean absolute error for regression tasks.
+
+```python
+class MeanAbsoluteError(Metric):
+    def __init__(self, name: Optional[str] = None)
+```
+
+#### Metric Registry
+
+##### `get_metric(name: str, **kwargs) -> Metric`
+
+Get a metric instance by name.
+
+```python
+from bz.metrics import get_metric
+
+accuracy = get_metric("accuracy")
+precision = get_metric("precision", average="macro")
+top5 = get_metric("top5_accuracy")  # Creates TopKAccuracy with k=5
+```
+
+##### `list_available_metrics() -> List[str]`
+
+List all available metric names.
+
+```python
+from bz.metrics import list_available_metrics
+
+metrics = list_available_metrics()
+# Returns: ['accuracy', 'precision', 'recall', 'f1_score', 'mse', 'mae', 'top5_accuracy']
+```
+
+#### Available Metrics
+
+| Metric Name | Class | Description |
+|-------------|-------|-------------|
+| `accuracy` | `Accuracy` | Classification accuracy |
+| `precision` | `Precision` | Classification precision |
+| `recall` | `Recall` | Classification recall |
+| `f1_score` | `F1Score` | F1 score |
+| `mse` | `MeanSquaredError` | Mean squared error |
+| `mae` | `MeanAbsoluteError` | Mean absolute error |
+| `top5_accuracy` | `TopKAccuracy` | Top-5 accuracy (k=5) |
+
+## Plugin System
+
+### `bz.plugins` - Plugin Module
+
+The plugin system provides extensible hooks into the training lifecycle.
+
+#### Base Classes
+
+##### `Plugin`
+
+Abstract base class for all plugins.
+
+```python
+class Plugin(ABC):
+    def __init__(self, name: Optional[str] = None, config: Optional[Any] = None)
+    def run_stage(self, stage: str, context: PluginContext) -> None
+```
+
+**Lifecycle Methods:**
+- `start_training_session(context)`: Called at training start
+- `load_checkpoint(context)`: Called when loading checkpoint
+- `start_epoch(context)`: Called at epoch start
+- `start_training_loop(context)`: Called at training loop start
+- `start_training_batch(context)`: Called at training batch start
+- `end_training_batch(context)`: Called at training batch end
+- `end_training_loop(context)`: Called at training loop end
+- `start_validation_loop(context)`: Called at validation start
+- `start_validation_batch(context)`: Called at validation batch start
+- `end_validation_batch(context)`: Called at validation batch end
+- `end_validation_loop(context)`: Called at validation end
+- `save_checkpoint(context)`: Called when saving checkpoint
+- `end_epoch(context)`: Called at epoch end
+- `end_training_session(context)`: Called at training end
+
+#### Built-in Plugins
+
+##### `ConsoleOutPlugin`
+
+Provides progress bars and training summaries.
+
+```python
+class ConsoleOutPlugin(Plugin):
+    def __init__(self, training_data_len: int, validation_data_len: int = 0, update_interval: int = 1)
+    
+    @classmethod
+    def init(cls, spec) -> ConsoleOutPlugin
+```
+
+##### `TensorBoardPlugin`
+
+Logs training metrics to TensorBoard.
+
+```python
+class TensorBoardPlugin(Plugin):
+    def __init__(self, training_loader_len: int, log_dir: str = "runs/experiment")
+    
+    @classmethod
+    def init(cls, spec, log_dir: str = "runs/experiment") -> TensorBoardPlugin
+```
+
+##### `EarlyStoppingPlugin`
+
+Automatically stops training when monitored metric stops improving.
+
+```python
+class EarlyStoppingPlugin(Plugin):
+    def __init__(self, config: Optional[EarlyStoppingConfig] = None)
+```
+
+**Configuration:**
+```python
+@dataclass
+class EarlyStoppingConfig:
+    enabled: bool = True
+    patience: int = 10
+    min_delta: float = 0.001
+    monitor: str = "validation_loss"
+    mode: str = "min"  # "min" or "max"
+    restore_best_weights: bool = True
+    verbose: bool = True
+    baseline: Optional[float] = None
+    min_epochs: int = 0
+    strategy: str = "patience"  # "patience", "plateau", "custom"
+    plateau_factor: float = 0.1
+    plateau_patience: int = 10
+    plateau_threshold: float = 0.0001
+    custom_conditions: Dict[str, Any] = field(default_factory=dict)
+```
+
+#### Plugin Registry
+
+##### `PluginRegistry`
+
+Manages plugin discovery and loading.
+
+```python
+class PluginRegistry:
+    def register(self, name: str, plugin_class: Type[Plugin], config: Optional[Dict[str, Any]] = None) -> None
+    def create_plugin(self, name: str, config: Optional[Dict[str, Any]] = None) -> Optional[Plugin]
+    def list_plugins(self) -> List[str]
+    def unregister(self, name: str) -> None
+```
+
+##### Global Functions
+
+```python
+def get_plugin_registry() -> PluginRegistry
+def register_plugin(name: str, plugin_class: Type[Plugin], config: Optional[Dict[str, Any]] = None) -> None
+def create_plugin(name: str, config: Optional[Dict[str, Any]] = None) -> Optional[Plugin]
+def list_plugins() -> List[str]
 ```
 
 ## Error Handling
