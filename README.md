@@ -14,8 +14,33 @@ A powerful, extensible Python package for training machine learning models with 
 
 ## 📦 Installation
 
+### Prerequisites
+- Python 3.10 or higher
+- PyTorch 2.7.0 or higher
+- CUDA (optional, for GPU acceleration)
+
+### Quick Install
 ```bash
 pip install bz-cli
+```
+
+### Plugin Installation
+```bash
+# Install specific plugins
+pip install bz-cli[optuna]      # Hyperparameter optimization
+pip install bz-cli[wandb]       # Experiment tracking
+pip install bz-cli[tensorboard] # Logging and visualization
+pip install bz-cli[profiler]    # Performance monitoring
+
+# Install all plugins
+pip install bz-cli[all]
+```
+
+### Development Install
+```bash
+git clone https://github.com/your-org/bz-cli.git
+cd bz-cli
+pip install -e ".[dev,all]"
 ```
 
 ## 🎯 Quick Start
@@ -128,13 +153,40 @@ metrics = [Accuracy(), Precision(), Recall()]
 bz train
 ```
 
-## 🔌 Built-in Plugins
+## 🔌 Plugin System
 
-- **Console Output**: Formatted training progress with tqdm
-- **TensorBoard**: Integration with TensorBoard for visualization
-- **Early Stopping**: Advanced early stopping with multiple strategies
-- **Optuna**: Hyperparameter optimization integration
-- **Weights & Biases**: Experiment tracking and model versioning
+### Core Plugins (Included)
+- **console_out**: Formatted console output with tqdm progress bars
+- **early_stopping**: Advanced early stopping with multiple strategies
+
+### Optional Plugins
+- **optuna**: Hyperparameter optimization with Optuna
+- **wandb**: Weights & Biases integration for experiment tracking
+- **tensorboard**: TensorBoard logging and visualization
+- **profiler**: Performance monitoring and profiling
+
+### Plugin Discovery
+Plugins are automatically discovered using Python entry points. The framework searches for plugins in:
+1. Built-in plugins (console_out, early_stopping)
+2. Installed packages with `bz.plugins` entry points
+3. User-defined plugins in the current environment
+
+### Plugin Configuration
+Plugins are configured in `bzconfig.json`:
+
+```json
+{
+  "plugins": [
+    "console_out",
+    {
+      "tensorboard": {
+        "enabled": true,
+        "log_dir": "runs/experiment"
+      }
+    }
+  ]
+}
+```
 
 ## 📊 Built-in Metrics
 
@@ -199,23 +251,26 @@ uv run black src tests
 
 ### Project Structure
 
+This project uses a monorepo structure with separate packages for plugins:
+
 ```
 bz-cli/
-├── src/bz/
-│   ├── __init__.py         # Main trainer and core classes
-│   ├── cli.py              # Command-line interface
-│   ├── config.py           # Configuration management
-│   ├── health.py           # System health checks
-│   ├── metrics/            # Modular metrics system
-│   │   ├── metric.py       # Base metric class
-│   │   ├── accuracy.py     # Individual metric files
-│   │   └── ...
-│   └── plugins/            # Plugin system
-│       ├── plugin.py       # Base plugin class
-│       ├── console_out.py  # Individual plugin files
-│       └── ...
+├── src/
+│   ├── bz/                 # Core framework
+│   │   ├── __init__.py     # Main trainer and core classes
+│   │   ├── cli.py          # Command-line interface
+│   │   ├── config.py       # Configuration management
+│   │   ├── health.py       # System health checks
+│   │   ├── metrics/        # Modular metrics system
+│   │   └── plugins/        # Core plugin system
+│   ├── bz_optuna/          # Optuna plugin package
+│   ├── bz_wandb/           # WandB plugin package
+│   ├── bz_tensorboard/     # TensorBoard plugin package
+│   └── bz_profiler/        # Profiler plugin package
 ├── tests/                  # Comprehensive test suite
 ├── examples/               # Example projects
+│   ├── fashion-mnist/      # Image classification example
+│   └── custom-plugin/      # Plugin development example
 └── docs/                   # Documentation
 ```
 

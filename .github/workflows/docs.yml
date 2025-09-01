@@ -15,5 +15,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
-      - run: pip install mkdocs mkdocs-material mkdocstrings[python] pymdown-extensions
+      - run: pip install mkdocs mkdocs-bootswatch mkdocstrings[python] pymdown-extensions
       - run: mkdocs gh-deploy --force --clean --verbose

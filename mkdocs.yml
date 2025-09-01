@@ -1,87 +1,34 @@
 site_name: bz-cli
+site_url: https://dbuzinski.github.io/bz-cli
+site_description: A tool for reproducible and efficient training of AI models.
+site_author: David Buzinski
+
 theme:
-  name: material
-  features:
-    - navigation.tabs
-    - navigation.sections
-    - navigation.expand
-    - search.suggest
-    - search.highlight
-  palette:
-    - scheme: default
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/toggle-switch
-        name: Switch to dark mode
-    - scheme: slate
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/toggle-switch-off-outline
-        name: Switch to light mode
+  name: darkly
 
 nav:
   - Home: index.md
-  - Usage Guide: usage.md
-  - API Reference: reference.md
-  - Examples:
-    - Basic Example: examples/basic.md
-    - Custom Plugins: examples/plugins.md
+  - Getting Started: getting-started.md
+  - User Guide: user-guide.md
+  - Developer Guide: developer-guide.md
+  - About: about.md
 
 plugins:
   - search
   - mkdocstrings:
-      default_handler: python
-      handlers:
-        python:
-          paths: [src]
-          options:
-            show_source: true
-            show_root_heading: true
-            show_category_heading: true
-            show_signature_annotations: true
-            show_bases: true
-            show_submodules: true
-            merge_init_into_class: true
-            show_if_no_docstring: true
-            members_order: source
-            docstring_style: google
-            preload_modules: true
 
 markdown_extensions:
-  - admonition
   - codehilite
-  - pymdownx.details
-  - pymdownx.superfences
-  - pymdownx.tabbed
-  - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
-  - pymdownx.smartsymbols
-  - pymdownx.snippets
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.saneheaders
-  - pymdownx.magiclink
-  - pymdownx.tasklist:
-      custom_checkbox: true
-  - attr_list
-  - md_in_html
-  - def_list
-  - footnotes
   - toc:
-      permalink: true
-  - pymdownx.caret
-  - pymdownx.keys
-  - pymdownx.mark
-  - pymdownx.tilde
+      permalink: '#'
 
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/yourusername/bz-cli
+      link: https://github.com/dbuzinski/bz-cli
+
+extra_javascript:
+  - js/copy-codeblock.js
 
 extra_css:
-  - stylesheets/extra.css
+  - css/custom.css

@@ -63,7 +63,6 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "mkdocs-material>=9.6.18",
     "mkdocstrings[python]>=0.30.0",
     "types-tqdm>=4.67.0.20250809",
     "pymdown-extensions>=10.0.0",
@@ -72,6 +71,7 @@ dev = [
     "black>=25.1.0",
     "mypy>=1.17.1",
     "types-psutil>=7.0.0.20250822",
+    "mkdocs-bootswatch>=1.1",
 ]
 
 [tool.ruff]
