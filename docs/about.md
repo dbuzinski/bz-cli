@@ -6,6 +6,6 @@ Make ML training accessible, reproducible, and extensible for every practitioner
 
 ## Get Involved
 
-- [GitHub Repository](https://github.com/your-org/bz-cli)
-- [Report Issues](https://github.com/your-org/bz-cli/issues)
+- [GitHub Repository](https://github.com/dbuzinski/bz-cli)
+- [Report Issues](https://github.com/dbuzinski/bz-cli/issues)
 - [Contributing Guide](developer-guide.md)

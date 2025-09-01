@@ -38,7 +38,7 @@ pip install bz-cli[all]
 
 ### Development Install
 ```bash
-git clone https://github.com/your-org/bz-cli.git
+git clone https://github.com/dbuzinski/bz-cli.git
 cd bz-cli
 pip install -e ".[dev,all]"
 ```

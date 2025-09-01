@@ -73,6 +73,6 @@ pip install --user bz-cli
 
 - **Documentation**: Check the [full documentation](index.md)
 - **Examples**: Browse [working examples](examples/)
-- **Issues**: Report bugs on [GitHub Issues](https://github.com/your-org/bz-cli/issues)
+- **Issues**: Report bugs on [GitHub Issues](https://github.com/dbuzinski/bz-cli/issues)
 
 **Pro Tip**: The `bz --help` command shows all available options and commands.
