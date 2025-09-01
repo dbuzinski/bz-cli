@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="David Buzinski">
+        <link rel="canonical" href="https://dbuzinski.github.io/bz-cli/user-guide/">
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>User Guide - bz-cli</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet">
+        <link href="../css/custom.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">bz-cli</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../getting-started/" class="nav-link">Getting Started</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="./" class="nav-link active" aria-current="page">User Guide</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../developer-guide/" class="nav-link">Developer Guide</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../about/" class="nav-link">About</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../getting-started/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../developer-guide/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#user-guide" class="nav-link">User Guide</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#cli-commands" class="nav-link">CLI Commands</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#configuration-schema" class="nav-link">Configuration Schema</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#training-script-structure" class="nav-link">Training Script Structure</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#custom-plugins" class="nav-link">Custom Plugins</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#custom-metrics" class="nav-link">Custom Metrics</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="user-guide">User Guide<a class="headerlink" href="#user-guide" title="Permanent link">#</a></h1>
+<p>This guide covers the essential aspects of using and extending the <code>bz</code> CLI tool.</p>
+<h2 id="cli-commands">CLI Commands<a class="headerlink" href="#cli-commands" title="Permanent link">#</a></h2>
+<p>The <code>bz</code> CLI provides a simple interface for training machine learning models.</p>
+<h3 id="bz-init"><code>bz init</code><a class="headerlink" href="#bz-init" title="Permanent link">#</a></h3>
+<p>Initialize a new project with the required structure.</p>
+<pre class="codehilite"><code class="language-bash">bz init
+</code></pre>
+
+<p>This creates:
+* <code>train.py</code> - Your training script
+* <code>bzconfig.json</code> - Configuration file</p>
+<h3 id="bz-train"><code>bz train</code><a class="headerlink" href="#bz-train" title="Permanent link">#</a></h3>
+<p>Train your model using the current configuration.</p>
+<pre class="codehilite"><code class="language-bash"># Basic training
+bz train
+
+# Train with custom config
+bz train --config my_config.json
+
+# Train for specific epochs
+bz train --epochs 100
+
+# Use specific device
+bz train --device cuda
+</code></pre>
+
+<p><strong>Options:</strong>
+- <code>--config</code>: Path to configuration file (default: <code>bzconfig.json</code>)
+- <code>--epochs</code>: Number of training epochs (overrides config)
+- <code>--device</code>: Device to use (<code>cpu</code>, <code>cuda</code>, or <code>auto</code>)</p>
+<h2 id="configuration-schema">Configuration Schema<a class="headerlink" href="#configuration-schema" title="Permanent link">#</a></h2>
+<p>The <code>bzconfig.json</code> file controls all aspects of training. Here's the complete schema:</p>
+<pre class="codehilite"><code class="language-json">{
+  &quot;training&quot;: {
+    &quot;epochs&quot;: 100,
+    &quot;batch_size&quot;: 32,
+    &quot;learning_rate&quot;: 0.001,
+    &quot;device&quot;: &quot;auto&quot;,
+    &quot;compile&quot;: true,
+    &quot;checkpoint_interval&quot;: 10,
+    &quot;validation_split&quot;: 0.2
+  },
+  &quot;plugins&quot;: [
+    &quot;console_out&quot;,
+    {
+      &quot;tensorboard&quot;: {
+        &quot;log_dir&quot;: &quot;runs/experiment&quot;,
+        &quot;flush_interval&quot;: 10
+      }
+    },
+    {
+      &quot;early_stopping&quot;: {
+        &quot;patience&quot;: 10,
+        &quot;monitor&quot;: &quot;validation_loss&quot;,
+        &quot;min_delta&quot;: 0.001
+      }
+    }
+  ],
+  &quot;metrics&quot;: [
+    &quot;accuracy&quot;,
+    &quot;precision&quot;,
+    &quot;recall&quot;,
+    &quot;f1_score&quot;
+  ]
+}
+</code></pre>
+
+<h3 id="training-configuration">Training Configuration<a class="headerlink" href="#training-configuration" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>epochs</code></td>
+<td>int</td>
+<td>1</td>
+<td>Number of training epochs</td>
+</tr>
+<tr>
+<td><code>batch_size</code></td>
+<td>int</td>
+<td>32</td>
+<td>Training batch size</td>
+</tr>
+<tr>
+<td><code>learning_rate</code></td>
+<td>float</td>
+<td>0.001</td>
+<td>Learning rate</td>
+</tr>
+<tr>
+<td><code>device</code></td>
+<td>string</td>
+<td>"auto"</td>
+<td>Device selection</td>
+</tr>
+<tr>
+<td><code>compile</code></td>
+<td>bool</td>
+<td>true</td>
+<td>Enable model compilation</td>
+</tr>
+<tr>
+<td><code>checkpoint_interval</code></td>
+<td>int</td>
+<td>0</td>
+<td>Save checkpoint every N epochs</td>
+</tr>
+<tr>
+<td><code>validation_split</code></td>
+<td>float</td>
+<td>0.2</td>
+<td>Validation data fraction</td>
+</tr>
+</tbody>
+</table>
+<h3 id="plugin-configuration">Plugin Configuration<a class="headerlink" href="#plugin-configuration" title="Permanent link">#</a></h3>
+<p>Plugins can be specified as simple strings (using defaults) or as objects with custom configuration:</p>
+<pre class="codehilite"><code class="language-json">{
+  &quot;plugins&quot;: [
+    &quot;console_out&quot;,                    // Simple string
+    &quot;early_stopping&quot;,                 // Simple string
+    {                                 // Object with config
+      &quot;tensorboard&quot;: {
+        &quot;log_dir&quot;: &quot;custom/path&quot;
+      }
+    }
+  ]
+}
+</code></pre>
+
+<h3 id="available-plugins">Available Plugins<a class="headerlink" href="#available-plugins" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>console_out</strong>: Progress bars and training output</li>
+<li><strong>early_stopping</strong>: Automatic training termination</li>
+<li><strong>tensorboard</strong>: TensorBoard logging</li>
+<li><strong>wandb</strong>: Weights &amp; Biases integration</li>
+<li><strong>profiler</strong>: Performance monitoring</li>
+</ul>
+<h2 id="training-script-structure">Training Script Structure<a class="headerlink" href="#training-script-structure" title="Permanent link">#</a></h2>
+<p>The <code>train.py</code> file is where you define your model, data, and training logic.</p>
+<h3 id="required-components">Required Components<a class="headerlink" href="#required-components" title="Permanent link">#</a></h3>
+<pre class="codehilite"><code class="language-python">import torch
+import torch.nn as nn
+from torch.optim import Adam
+from torch.utils.data import DataLoader
+
+# 1. Model definition
+model = nn.Sequential(
+    nn.Linear(784, 128),
+    nn.ReLU(),
+    nn.Linear(128, 10)
+)
+
+# 2. Loss function
+loss_fn = nn.CrossEntropyLoss()
+
+# 3. Optimizer
+optimizer = Adam(model.parameters(), lr=0.001)
+
+# 4. Data loaders
+training_loader = DataLoader(training_dataset, batch_size=32, shuffle=True)
+validation_loader = DataLoader(validation_dataset, batch_size=32)
+</code></pre>
+
+<h3 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">#</a></h3>
+<ol>
+<li><strong>Discovery</strong>: <code>bz</code> automatically discovers your <code>train.py</code> file</li>
+<li><strong>Import</strong>: The file is imported and variables are extracted</li>
+<li><strong>Validation</strong>: Required variables are checked for existence</li>
+<li><strong>Training</strong>: The training loop is executed with your components</li>
+</ol>
+<h3 id="variable-requirements">Variable Requirements<a class="headerlink" href="#variable-requirements" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Required</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model</code></td>
+<td>Yes</td>
+<td><code>nn.Module</code></td>
+<td>Your PyTorch model</td>
+</tr>
+<tr>
+<td><code>loss_fn</code></td>
+<td>Yes</td>
+<td>Callable</td>
+<td>Loss function</td>
+</tr>
+<tr>
+<td><code>optimizer</code></td>
+<td>Yes</td>
+<td>Optimizer</td>
+<td>PyTorch optimizer</td>
+</tr>
+<tr>
+<td><code>training_loader</code></td>
+<td>Yes</td>
+<td>DataLoader</td>
+<td>Training data</td>
+</tr>
+<tr>
+<td><code>validation_loader</code></td>
+<td>No</td>
+<td>DataLoader</td>
+<td>Validation data</td>
+</tr>
+<tr>
+<td><code>metrics</code></td>
+<td>No</td>
+<td>List</td>
+<td>Custom metrics to track</td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-complete-script">Example Complete Script<a class="headerlink" href="#example-complete-script" title="Permanent link">#</a></h3>
+<pre class="codehilite"><code class="language-python">import torch
+import torch.nn as nn
+from torch.optim import Adam
+from torch.utils.data import DataLoader, random_split
+from torchvision import datasets, transforms
+
+# Data preparation
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])
+
+dataset = datasets.MNIST('./data', train=True, download=True, transform=transform)
+train_size = int(0.8 * len(dataset))
+val_size = len(dataset) - train_size
+train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+
+# Data loaders
+training_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+validation_loader = DataLoader(val_dataset, batch_size=32)
+
+# Model
+model = nn.Sequential(
+    nn.Flatten(),
+    nn.Linear(784, 128),
+    nn.ReLU(),
+    nn.Dropout(0.2),
+    nn.Linear(128, 10)
+)
+
+# Training components
+loss_fn = nn.CrossEntropyLoss()
+optimizer = Adam(model.parameters(), lr=0.001)
+</code></pre>
+
+<h2 id="custom-plugins">Custom Plugins<a class="headerlink" href="#custom-plugins" title="Permanent link">#</a></h2>
+<p>Plugins allow you to hook into the training lifecycle and add custom functionality.</p>
+<h3 id="plugin-base-class">Plugin Base Class<a class="headerlink" href="#plugin-base-class" title="Permanent link">#</a></h3>
+<pre class="codehilite"><code class="language-python">from bz.plugins import Plugin
+
+class MyCustomPlugin(Plugin):
+    def __init__(self, config=None):
+        super().__init__()
+        self.config = config or {}
+
+    def start_training_session(self, context):
+        &quot;&quot;&quot;Called when training begins&quot;&quot;&quot;
+        print(f&quot;Starting training for {context.epochs} epochs&quot;)
+
+    def end_epoch(self, context):
+        &quot;&quot;&quot;Called at the end of each epoch&quot;&quot;&quot;
+        print(f&quot;Epoch {context.epoch}: Loss = {context.training_loss:.4f}&quot;)
+
+    def end_training_session(self, context):
+        &quot;&quot;&quot;Called when training completes&quot;&quot;&quot;
+        print(&quot;Training completed successfully!&quot;)
+</code></pre>
+
+<h3 id="available-hooks">Available Hooks<a class="headerlink" href="#available-hooks" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Hook</th>
+<th>Description</th>
+<th>Context Available</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>start_training_session</code></td>
+<td>Training begins</td>
+<td>Epochs, device, config</td>
+</tr>
+<tr>
+<td><code>start_epoch</code></td>
+<td>Epoch begins</td>
+<td>Current epoch number</td>
+</tr>
+<tr>
+<td><code>end_epoch</code></td>
+<td>Epoch ends</td>
+<td>Metrics, loss, epoch info</td>
+</tr>
+<tr>
+<td><code>end_training_session</code></td>
+<td>Training ends</td>
+<td>Final summary</td>
+</tr>
+<tr>
+<td><code>save_checkpoint</code></td>
+<td>Checkpoint saved</td>
+<td>Checkpoint path</td>
+</tr>
+<tr>
+<td><code>load_checkpoint</code></td>
+<td>Checkpoint loaded</td>
+<td>Checkpoint info</td>
+</tr>
+</tbody>
+</table>
+<h3 id="plugin-configuration_1">Plugin Configuration<a class="headerlink" href="#plugin-configuration_1" title="Permanent link">#</a></h3>
+<pre class="codehilite"><code class="language-python"># In your train.py
+from my_plugins import MyCustomPlugin
+
+# Create plugin with config
+my_plugin = MyCustomPlugin({
+    &quot;log_file&quot;: &quot;training.log&quot;,
+    &quot;verbose&quot;: True
+})
+
+# Add to plugins list
+plugins = [my_plugin]
+</code></pre>
+
+<h3 id="plugin-discovery">Plugin Discovery<a class="headerlink" href="#plugin-discovery" title="Permanent link">#</a></h3>
+<p>Place your plugin files in a <code>plugins/</code> directory or install them as Python packages. The framework automatically discovers plugins in the <code>plugins</code> list.</p>
+<h2 id="custom-metrics">Custom Metrics<a class="headerlink" href="#custom-metrics" title="Permanent link">#</a></h2>
+<p>Create custom metrics to track domain-specific performance measures.</p>
+<h3 id="metric-base-class">Metric Base Class<a class="headerlink" href="#metric-base-class" title="Permanent link">#</a></h3>
+<pre class="codehilite"><code class="language-python">from bz.metrics import Metric
+import torch
+
+class CustomAccuracy(Metric):
+    def __init__(self, threshold=0.5, name=None):
+        super().__init__(name or &quot;custom_accuracy&quot;)
+        self.threshold = threshold
+        self.correct = 0
+        self.total = 0
+
+    def reset(self):
+        &quot;&quot;&quot;Reset metric state between epochs&quot;&quot;&quot;
+        self.correct = 0
+        self.total = 0
+
+    def update(self, predictions, targets):
+        &quot;&quot;&quot;Update metric with batch results&quot;&quot;&quot;
+        # Apply threshold for binary classification
+        pred_labels = (predictions &gt; self.threshold).long()
+        self.correct += (pred_labels == targets).sum().item()
+        self.total += targets.size(0)
+
+    def compute(self):
+        &quot;&quot;&quot;Compute final metric value&quot;&quot;&quot;
+        return self.correct / self.total if self.total &gt; 0 else 0.0
+</code></pre>
+
+<h3 id="using-custom-metrics">Using Custom Metrics<a class="headerlink" href="#using-custom-metrics" title="Permanent link">#</a></h3>
+<pre class="codehilite"><code class="language-python"># In your train.py
+from my_metrics import CustomAccuracy
+
+# Create metrics list
+metrics = [
+    CustomAccuracy(threshold=0.5),
+    CustomAccuracy(threshold=0.7, name=&quot;strict_accuracy&quot;)
+]
+
+# The framework automatically tracks these during training
+</code></pre>
+
+<h3 id="metric-requirements">Metric Requirements<a class="headerlink" href="#metric-requirements" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Inherit from <code>Metric</code></strong>: Use the base class for consistency</li>
+<li><strong>Implement required methods</strong>: <code>reset()</code>, <code>update()</code>, <code>compute()</code></li>
+<li><strong>Handle edge cases</strong>: Check for division by zero, empty tensors</li>
+<li><strong>Use descriptive names</strong>: Names appear in logs and TensorBoard</li>
+</ul>
+<h3 id="advanced-metrics">Advanced Metrics<a class="headerlink" href="#advanced-metrics" title="Permanent link">#</a></h3>
+<p>For complex metrics that require multiple passes or external data:</p>
+<pre class="codehilite"><code class="language-python">class AdvancedMetric(Metric):
+    def __init__(self):
+        super().__init__(&quot;advanced_metric&quot;)
+        self.predictions = []
+        self.targets = []
+
+    def update(self, predictions, targets):
+        &quot;&quot;&quot;Store predictions and targets for later computation&quot;&quot;&quot;
+        self.predictions.extend(predictions.cpu().numpy())
+        self.targets.extend(targets.cpu().numpy())
+
+    def compute(self):
+        &quot;&quot;&quot;Compute metric using all collected data&quot;&quot;&quot;
+        # Complex computation here
+        return complex_calculation(self.predictions, self.targets)
+</code></pre>
+
+<h3 id="metric-registration">Metric Registration<a class="headerlink" href="#metric-registration" title="Permanent link">#</a></h3>
+<p>Custom metrics are automatically available when imported. No additional registration is required - just include them in your <code>metrics</code> list.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../js/copy-codeblock.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
