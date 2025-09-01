@@ -1,0 +1,13 @@
+/* Custom CSS for bz-cli documentation */
+
+/* Fix search bar positioning for darkly theme */
+.navbar-nav.ms-md-auto {
+    margin-left: auto !important;
+}
+
+/* Ensure search bar is properly aligned on mobile */
+@media (max-width: 768px) {
+    .navbar-nav.ms-md-auto {
+        margin-left: 0 !important;
+    }
+}
